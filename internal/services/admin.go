@@ -8,9 +8,9 @@ import (
 )
 
 type AdminRepository interface {
-	GetByEmail(email string) (*entities.Admin, error)
+	GetById(id uuid.UUID) (*entities.Admin, error)
 	Create(admin *entities.Admin) error
-	DeleteByEmail(email string) error
+	DeleteById(id uuid.UUID) error
 	UpdateById(id uuid.UUID, value *requests.AdminRequest) error
 	GetAll() ([]entities.Admin, error)
 	GetOnlyActive() ([]entities.Admin, error)
@@ -26,8 +26,14 @@ func NewAdminService(repo AdminRepository) rest.AdminService {
 	}
 }
 
-func (s *AdminService) GetByEmail(email string) (*entities.Admin, error) {
-	record, err := s.repo.GetByEmail(email)
+func (s *AdminService) GetByEmail(id string) (*entities.Admin, error) {
+
+	parsedId, err := uuid.Parse(id)
+	if err != nil {
+		return nil, err
+	}
+
+	record, err := s.repo.GetById(parsedId)
 	return record, err
 }
 
@@ -40,8 +46,12 @@ func (s *AdminService) Create(r *requests.AdminRequest) error {
 	return s.repo.Create(value)
 }
 
-func (s *AdminService) DeleteByEmail(email string) error {
-	return s.repo.DeleteByEmail(email)
+func (s *AdminService) DeleteById(id string) error {
+	parsedId, err := uuid.Parse(id)
+	if err != nil {
+		return err
+	}
+	return s.repo.DeleteById(parsedId)
 }
 
 func (s *AdminService) UpdateById(id uuid.UUID, value *requests.AdminRequest) error {

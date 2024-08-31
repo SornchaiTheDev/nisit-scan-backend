@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/services"
@@ -22,8 +23,9 @@ func NewAdminRepo(q *sqlc.Queries) services.AdminRepository {
 	}
 }
 
-func (r *AdminRepoImpl) GetByEmail(email string) (*entities.Admin, error) {
-	admin, err := r.q.GetAdminByEmail(context.Background(), email)
+func (r *AdminRepoImpl) GetById(id uuid.UUID) (*entities.Admin, error) {
+
+	admin, err := r.q.GetAdminById(context.Background(), id)
 
 	parsedAdmin := &entities.Admin{
 		Id:       admin.ID,
@@ -42,20 +44,42 @@ func (r *AdminRepoImpl) Create(e *entities.Admin) error {
 	return r.q.CreateAdmin(context.Background(), admin)
 }
 
-func (r *AdminRepoImpl) DeleteByEmail(email string) error {
+func (r *AdminRepoImpl) DeleteById(id uuid.UUID) error {
+
+	record, err := r.GetById(id)
+
+	if err != nil {
+		return domain.ErrAdminNotFound
+	}
+
+	if !record.DeletedAt.IsZero() {
+		return domain.ErrAdminNotFound
+	}
+
 	deletedAt := pgtype.Timestamp{}
 	deletedAt.Scan(time.Now())
 
-	payload := sqlc.DeleteAdminByEmailParams{
-		Email:     email,
+	payload := sqlc.DeleteAdminByIdParams{
+		ID:        id,
 		DeletedAt: deletedAt,
 	}
 
-	return r.q.DeleteAdminByEmail(context.Background(), payload)
+	return r.q.DeleteAdminById(context.Background(), payload)
 
 }
 
 func (r *AdminRepoImpl) UpdateById(id uuid.UUID, value *requests.AdminRequest) error {
+
+	record, err := r.GetById(id)
+
+	if err != nil {
+		return domain.ErrAdminNotFound
+	}
+
+	if !record.DeletedAt.IsZero() {
+		return domain.ErrAdminNotFound
+	}
+
 	payload := sqlc.UpdateAdminByIdParams{
 		ID:       id,
 		FullName: value.FullName,

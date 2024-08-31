@@ -26,18 +26,18 @@ func (q *Queries) CreateAdmin(ctx context.Context, arg CreateAdminParams) error 
 	return err
 }
 
-const deleteAdminByEmail = `-- name: DeleteAdminByEmail :exec
+const deleteAdminById = `-- name: DeleteAdminById :exec
 UPDATE admins SET deleted_at = $1 
-WHERE email = $2
+WHERE id = $2
 `
 
-type DeleteAdminByEmailParams struct {
+type DeleteAdminByIdParams struct {
 	DeletedAt pgtype.Timestamp
-	Email     string
+	ID        uuid.UUID
 }
 
-func (q *Queries) DeleteAdminByEmail(ctx context.Context, arg DeleteAdminByEmailParams) error {
-	_, err := q.db.Exec(ctx, deleteAdminByEmail, arg.DeletedAt, arg.Email)
+func (q *Queries) DeleteAdminById(ctx context.Context, arg DeleteAdminByIdParams) error {
+	_, err := q.db.Exec(ctx, deleteAdminById, arg.DeletedAt, arg.ID)
 	return err
 }
 
@@ -70,13 +70,13 @@ func (q *Queries) GetActiveAdmins(ctx context.Context) ([]Admin, error) {
 	return items, nil
 }
 
-const getAdminByEmail = `-- name: GetAdminByEmail :one
+const getAdminById = `-- name: GetAdminById :one
 SELECT id, email, full_name, deleted_at FROM admins
-WHERE email = $1
+WHERE id = $1 AND deleted_at IS NULL
 `
 
-func (q *Queries) GetAdminByEmail(ctx context.Context, email string) (Admin, error) {
-	row := q.db.QueryRow(ctx, getAdminByEmail, email)
+func (q *Queries) GetAdminById(ctx context.Context, id uuid.UUID) (Admin, error) {
+	row := q.db.QueryRow(ctx, getAdminById, id)
 	var i Admin
 	err := row.Scan(
 		&i.ID,
@@ -119,7 +119,7 @@ func (q *Queries) GetAllAdmins(ctx context.Context) ([]Admin, error) {
 const updateAdminById = `-- name: UpdateAdminById :exec
 UPDATE admins 
 SET email = $1, full_name = $2
-WHERE id = $3
+WHERE id = $3 AND deleted_at IS NULL
 `
 
 type UpdateAdminByIdParams struct {

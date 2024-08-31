@@ -2,12 +2,15 @@ package rest
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
+	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/responses"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -16,7 +19,7 @@ import (
 type AdminService interface {
 	GetByEmail(email string) (*entities.Admin, error)
 	Create(r *requests.AdminRequest) error
-	DeleteByEmail(email string) error
+	DeleteById(id string) error
 	UpdateById(id uuid.UUID, value *requests.AdminRequest) error
 	GetAll() ([]entities.Admin, error)
 	GetOnlyActive() ([]entities.Admin, error)
@@ -36,15 +39,21 @@ func NewAdminHandler(app *fiber.App, service AdminService) {
 
 	admin := app.Group("/admin")
 
-	app.Get("/admins", handler.GetAll)
-	admin.Get("/:email", handler.GetByEmail)
+	admin.Use(basicauth.New(basicauth.Config{
+		Users: map[string]string{
+			"admin": "admin",
+		},
+	}))
+
+	admin.Get("/all", handler.GetAll)
+	admin.Get("/:id", handler.GetById)
 	admin.Post("/", handler.Create)
-	admin.Delete("/:email", handler.DeleteByEmail)
+	admin.Delete("/:id", handler.DeleteById)
 	admin.Put("/:id", handler.UpdateById)
 }
 
-func (h *AdminHandler) GetByEmail(c *fiber.Ctx) error {
-	email := c.Params("email")
+func (h *AdminHandler) GetById(c *fiber.Ctx) error {
+	email := c.Params("id")
 
 	record, err := h.service.GetByEmail(email)
 	if err != nil {
@@ -118,16 +127,32 @@ func (h *AdminHandler) UpdateById(c *fiber.Ctx) error {
 		Email:    request.Email,
 	}
 
-	h.service.UpdateById(parsedId, payload)
+	err = h.service.UpdateById(parsedId, payload)
+	if err != nil {
+		fmt.Println(err)
+		if errors.Is(err, domain.ErrAdminNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "User not found",
+			})
+		}
+	}
 
-	return c.Status(fiber.StatusOK).SendString("OK")
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "User updated",
+	})
 }
 
-func (h *AdminHandler) DeleteByEmail(c *fiber.Ctx) error {
-	email := c.Params("email")
+func (h *AdminHandler) DeleteById(c *fiber.Ctx) error {
+	id := c.Params("id")
 
-	err := h.service.DeleteByEmail(email)
+	err := h.service.DeleteById(id)
 	if err != nil {
+		if errors.Is(err, domain.ErrAdminNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "User not found",
+			})
+		}
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err,
 		})
