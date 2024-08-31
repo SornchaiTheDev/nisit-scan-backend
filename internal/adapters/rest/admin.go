@@ -1,0 +1,195 @@
+package rest
+
+import (
+	"errors"
+	"time"
+
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/responses"
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+type AdminService interface {
+	GetByEmail(email string) (*entities.Admin, error)
+	Create(r *requests.AdminRequest) error
+	DeleteByEmail(email string) error
+	UpdateById(id uuid.UUID, value *requests.AdminRequest) error
+	GetAll() ([]entities.Admin, error)
+	GetOnlyActive() ([]entities.Admin, error)
+}
+
+type AdminHandler struct {
+	app     *fiber.App
+	service AdminService
+}
+
+func NewAdminHandler(app *fiber.App, service AdminService) {
+
+	handler := &AdminHandler{
+		app:     app,
+		service: service,
+	}
+
+	admin := app.Group("/admin")
+
+	app.Get("/admins", handler.GetAll)
+	admin.Get("/:email", handler.GetByEmail)
+	admin.Post("/", handler.Create)
+	admin.Delete("/:email", handler.DeleteByEmail)
+	admin.Put("/:id", handler.UpdateById)
+}
+
+func (h *AdminHandler) GetByEmail(c *fiber.Ctx) error {
+	email := c.Params("email")
+
+	record, err := h.service.GetByEmail(email)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "User not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(responses.AdminResponse{
+		Id:       record.Id,
+		Email:    record.Email,
+		FullName: record.FullName,
+	})
+}
+
+func (h *AdminHandler) Create(c *fiber.Ctx) error {
+	var r requests.AdminRequest
+	err := c.BodyParser(&r)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+
+	if err := h.service.Create(&r); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"message": "This email is already exists",
+				})
+			}
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "SOMETHING_WENT_WRONG",
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "User created",
+	})
+}
+
+func (h *AdminHandler) UpdateById(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	var request requests.AdminRequest
+
+	if err := c.BodyParser(&request); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Cannot read request body",
+		})
+	}
+
+	parsedId, err := uuid.Parse(id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Cannot parse id to uuid",
+		})
+	}
+
+	payload := &requests.AdminRequest{
+		FullName: request.FullName,
+		Email:    request.Email,
+	}
+
+	h.service.UpdateById(parsedId, payload)
+
+	return c.Status(fiber.StatusOK).SendString("OK")
+}
+
+func (h *AdminHandler) DeleteByEmail(c *fiber.Ctx) error {
+	email := c.Params("email")
+
+	err := h.service.DeleteByEmail(email)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Uesr deleted",
+	})
+}
+
+func (h *AdminHandler) GetAll(c *fiber.Ctx) error {
+
+	show := c.Query("show")
+
+	var admins []entities.Admin
+
+	if show == "all" {
+		_admins, err := h.service.GetAll()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Something went wrong",
+			})
+		}
+
+		admins = _admins
+		resAdmins := []responses.AllAdminResponse{}
+
+		for _, admin := range admins {
+			var deletedAt *time.Time
+
+			if !admin.DeletedAt.IsZero() {
+				deletedAt = &admin.DeletedAt
+			}
+
+			resAdmins = append(resAdmins, responses.AllAdminResponse{
+				Id:        admin.Id,
+				Email:     admin.Email,
+				FullName:  admin.FullName,
+				DeletedAt: deletedAt,
+			})
+		}
+		return c.Status(fiber.StatusOK).JSON(resAdmins)
+	} else {
+		_admins, err := h.service.GetOnlyActive()
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Something went wrong",
+			})
+		}
+
+		admins = _admins
+
+		resAdmins := []responses.AdminResponse{}
+
+		for _, admin := range admins {
+			resAdmins = append(resAdmins, responses.AdminResponse{
+				Id:       admin.Id,
+				Email:    admin.Email,
+				FullName: admin.FullName,
+			})
+		}
+		return c.Status(fiber.StatusOK).JSON(resAdmins)
+	}
+
+}

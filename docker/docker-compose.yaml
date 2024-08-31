@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nisits-db
+      POSTGRES_PASSWORD: bG2LuqBedMjyJ9bVIjxqhQ==
+      POSTGRES_DB: nisits-scan
+    volumes:
+      - nisits-scan:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+volumes:
+  nisits-scan:
