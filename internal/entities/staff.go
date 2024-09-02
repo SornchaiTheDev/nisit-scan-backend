@@ -1,6 +1,8 @@
 package entities
 
+import "github.com/google/uuid"
+
 type Staff struct {
-	Id    string `json:"id"`
+	Id    uuid.UUID `json:"id"`
 	Email string `json:"email"`
 }

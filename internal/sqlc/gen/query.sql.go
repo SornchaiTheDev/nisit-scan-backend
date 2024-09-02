@@ -49,6 +49,20 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) error 
 	return err
 }
 
+const createStaffRecord = `-- name: CreateStaffRecord :exec
+INSERT INTO staffs (email,event_id) VALUES ($1,$2)
+`
+
+type CreateStaffRecordParams struct {
+	Email   string
+	EventID uuid.UUID
+}
+
+func (q *Queries) CreateStaffRecord(ctx context.Context, arg CreateStaffRecordParams) error {
+	_, err := q.db.Exec(ctx, createStaffRecord, arg.Email, arg.EventID)
+	return err
+}
+
 const deleteAdminById = `-- name: DeleteAdminById :exec
 UPDATE admins SET deleted_at = $1 
 WHERE id = $2
@@ -70,6 +84,15 @@ DELETE FROM events WHERE id = $1
 
 func (q *Queries) DeleteEventById(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteEventById, id)
+	return err
+}
+
+const deleteStaffById = `-- name: DeleteStaffById :exec
+DELETE FROM staffs WHERE id = $1
+`
+
+func (q *Queries) DeleteStaffById(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteStaffById, id)
 	return err
 }
 
@@ -248,6 +271,41 @@ func (q *Queries) GetEventById(ctx context.Context, id uuid.UUID) (GetEventByIdR
 		&i.FullName,
 		&i.DeletedAt,
 	)
+	return i, err
+}
+
+const getStaffByEventId = `-- name: GetStaffByEventId :many
+SELECT id, email, event_id FROM staffs WHERE event_id = $1
+`
+
+func (q *Queries) GetStaffByEventId(ctx context.Context, eventID uuid.UUID) ([]Staff, error) {
+	rows, err := q.db.Query(ctx, getStaffByEventId, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Staff
+	for rows.Next() {
+		var i Staff
+		if err := rows.Scan(&i.ID, &i.Email, &i.EventID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getStaffById = `-- name: GetStaffById :one
+SELECT id, email, event_id FROM staffs WHERE id = $1
+`
+
+func (q *Queries) GetStaffById(ctx context.Context, id uuid.UUID) (Staff, error) {
+	row := q.db.QueryRow(ctx, getStaffById, id)
+	var i Staff
+	err := row.Scan(&i.ID, &i.Email, &i.EventID)
 	return i, err
 }
 
