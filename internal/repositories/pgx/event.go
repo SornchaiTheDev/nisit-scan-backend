@@ -44,6 +44,9 @@ func (e *EventRepoImpl) GetAll() ([]*entities.Event, error) {
 
 func (e *EventRepoImpl) GetById(id uuid.UUID) (*entities.Event, error) {
 	event, err := e.q.GetEventById(context.Background(), id)
+	if err != nil {
+		return nil, err
+	}
 
 	parsedEvent := &entities.Event{
 		Id:    event.ID,

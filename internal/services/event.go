@@ -1,12 +1,15 @@
 package services
 
 import (
+	"errors"
 	"time"
 
+	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type EventRepository interface {
@@ -44,6 +47,16 @@ func parseRequestToEntity(r *requests.EventRequest) (*entities.Event, error) {
 	return event, nil
 }
 
+func (s *EventService) isEventExist(id *uuid.UUID) error {
+	_, err := s.repo.GetById(*id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.ErrEventNotFound
+		}
+	}
+	return nil
+}
+
 func (s *EventService) GetAll() ([]*entities.Event, error) {
 	return s.repo.GetAll()
 }
@@ -72,11 +85,21 @@ func (s *EventService) DeleteById(id string) error {
 		return err
 	}
 
+	err = s.isEventExist(parsedId)
+	if err != nil {
+		return err
+	}
+
 	return s.repo.DeleteById(*parsedId)
 }
 
 func (s *EventService) UpdateById(id string, r *requests.EventRequest) error {
 	parsedId, err := libs.ParseUUID(id)
+	if err != nil {
+		return err
+	}
+
+	err = s.isEventExist(parsedId)
 	if err != nil {
 		return err
 	}

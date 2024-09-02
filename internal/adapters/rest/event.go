@@ -3,9 +3,11 @@ package rest
 import (
 	"errors"
 
+	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -57,6 +59,12 @@ func (h *EventHandler) create(c *fiber.Ctx) error {
 					"message": "This event is already exists",
 				})
 			}
+			if pgErr.Code == "23503" {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"code":    "ADMIN_ID_ERROR",
+					"message": "This admin id not found",
+				})
+			}
 		}
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -91,6 +99,13 @@ func (h *EventHandler) getById(c *fiber.Ctx) error {
 	id := c.Params("id")
 	event, err := h.service.GetById(id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_NOT_FOUND",
+				"message": "Event not found",
+			})
+		}
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
 			"message": err,
@@ -102,7 +117,24 @@ func (h *EventHandler) getById(c *fiber.Ctx) error {
 
 func (h *EventHandler) deleteById(c *fiber.Ctx) error {
 	id := c.Params("id")
-	return h.service.DeleteById(id)
+	err := h.service.DeleteById(id)
+	if err != nil {
+		if errors.Is(err, domain.ErrEventNotFound) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_NOT_FOUND",
+				"message": "Event not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+	return c.JSON(fiber.Map{
+		"code":    "SUCCESS",
+		"message": "Delte Event Success",
+	})
 }
 
 func (h *EventHandler) updateById(c *fiber.Ctx) error {
@@ -119,6 +151,13 @@ func (h *EventHandler) updateById(c *fiber.Ctx) error {
 
 	err = h.service.UpdateById(id, payload)
 	if err != nil {
+		if errors.Is(err, domain.ErrEventNotFound) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_NOT_FOUND",
+				"message": "Event not found",
+			})
+		}
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
 			"message": err,
