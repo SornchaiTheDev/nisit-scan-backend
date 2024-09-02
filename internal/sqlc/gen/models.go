@@ -22,16 +22,16 @@ type Event struct {
 	Place   string
 	Date    pgtype.Date
 	Host    string
-	AdminID pgtype.UUID
+	AdminID uuid.UUID
 }
 
 type Participant struct {
 	Barcode   string
 	Timestamp pgtype.Timestamp
-	EventID   pgtype.UUID
+	EventID   uuid.UUID
 }
 
 type Staff struct {
 	Email   string
-	EventID pgtype.UUID
+	EventID uuid.UUID
 }
