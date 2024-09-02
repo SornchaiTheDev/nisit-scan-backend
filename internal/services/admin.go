@@ -1,7 +1,6 @@
 package services
 
 import (
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/adapters/rest"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
 	"github.com/google/uuid"
@@ -20,7 +19,7 @@ type AdminService struct {
 	repo AdminRepository
 }
 
-func NewAdminService(repo AdminRepository) rest.AdminService {
+func NewAdminService(repo AdminRepository) *AdminService {
 	return &AdminService{
 		repo: repo,
 	}
