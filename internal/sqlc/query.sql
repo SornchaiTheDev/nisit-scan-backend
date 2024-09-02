@@ -8,6 +8,10 @@ SELECT * FROM admins WHERE deleted_at IS NULL;
 SELECT * FROM admins
 WHERE id = $1 AND deleted_at IS NULL;
 
+-- name: GetAdminByEmail :one
+SELECT * FROM admins
+WHERE email = $1 AND deleted_at IS NULL;
+
 -- name: CreateAdmin :exec
 INSERT INTO admins (email,full_name) VALUES ($1,$2);
 

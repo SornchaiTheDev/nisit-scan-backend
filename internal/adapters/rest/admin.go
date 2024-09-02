@@ -13,11 +13,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type AdminService interface {
-	GetByEmail(email string) (*entities.Admin, error)
+	GetById(id string) (*entities.Admin, error)
 	Create(r *requests.AdminRequest) error
 	DeleteById(id string) error
 	UpdateById(id uuid.UUID, value *requests.AdminRequest) error
@@ -53,9 +52,9 @@ func NewAdminHandler(app *fiber.App, service AdminService) {
 }
 
 func (h *AdminHandler) GetById(c *fiber.Ctx) error {
-	email := c.Params("id")
+	id := c.Params("id")
 
-	record, err := h.service.GetByEmail(email)
+	record, err := h.service.GetById(id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -85,13 +84,11 @@ func (h *AdminHandler) Create(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.Create(&r); err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"message": "This email is already exists",
-				})
-			}
+		if errors.Is(err, domain.ErrAdminAlreadyExists) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "ADMIN_ALREADY_EXISTS",
+				"message": "This email is already exists",
+			})
 		}
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -159,7 +156,7 @@ func (h *AdminHandler) DeleteById(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Uesr deleted",
+		"message": "User deleted",
 	})
 }
 

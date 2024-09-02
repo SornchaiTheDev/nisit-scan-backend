@@ -127,3 +127,19 @@ func (r *AdminRepoImpl) GetOnlyActive() ([]entities.Admin, error) {
 
 	return parsedAdmins, err
 }
+
+func (r *AdminRepoImpl) GetByEmail(email string) (*entities.Admin, error) {
+	admin, err := r.q.GetAdminByEmail(context.Background(), email)
+	if err != nil {
+		return nil, err
+	}
+
+	adminEntity := &entities.Admin{
+		Id:        admin.ID,
+		FullName:  admin.FullName,
+		Email:     admin.Email,
+		DeletedAt: admin.DeletedAt.Time,
+	}
+
+	return adminEntity, nil
+}

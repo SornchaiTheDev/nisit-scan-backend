@@ -102,6 +102,23 @@ func (q *Queries) GetActiveAdmins(ctx context.Context) ([]Admin, error) {
 	return items, nil
 }
 
+const getAdminByEmail = `-- name: GetAdminByEmail :one
+SELECT id, email, full_name, deleted_at FROM admins
+WHERE email = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetAdminByEmail(ctx context.Context, email string) (Admin, error) {
+	row := q.db.QueryRow(ctx, getAdminByEmail, email)
+	var i Admin
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FullName,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const getAdminById = `-- name: GetAdminById :one
 SELECT id, email, full_name, deleted_at FROM admins
 WHERE id = $1 AND deleted_at IS NULL
