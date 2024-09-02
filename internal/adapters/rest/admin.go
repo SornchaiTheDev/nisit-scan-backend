@@ -57,6 +57,7 @@ func (h *AdminHandler) GetById(c *fiber.Ctx) error {
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"code":    "USER_NOT_FOUND",
 				"message": "User not found",
 			})
 		}
@@ -91,11 +92,13 @@ func (h *AdminHandler) Create(c *fiber.Ctx) error {
 		}
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
 			"message": "SOMETHING_WENT_WRONG",
 		})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"code":    "SUCCESS",
 		"message": "User created",
 	})
 }
@@ -107,6 +110,7 @@ func (h *AdminHandler) UpdateById(c *fiber.Ctx) error {
 
 	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"ccde":    "SOMETHING_WENT_WRONG",
 			"message": "Cannot read request body",
 		})
 	}
@@ -114,6 +118,7 @@ func (h *AdminHandler) UpdateById(c *fiber.Ctx) error {
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"ccde":    "SOMETHING_WENT_WRONG",
 			"message": "Cannot parse id to uuid",
 		})
 	}
@@ -127,12 +132,14 @@ func (h *AdminHandler) UpdateById(c *fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, domain.ErrAdminNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"ccde":    "USER_NOT_FOUND",
 				"message": "User not found",
 			})
 		}
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+	return c.JSON(fiber.Map{
+		"code":    "SUCCESS",
 		"message": "User updated",
 	})
 }
@@ -144,6 +151,7 @@ func (h *AdminHandler) DeleteById(c *fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, domain.ErrAdminNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"code":    "USER_NOT_FOUND",
 				"message": "User not found",
 			})
 		}
@@ -153,7 +161,8 @@ func (h *AdminHandler) DeleteById(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+	return c.JSON(fiber.Map{
+		"code":    "SUCCESS",
 		"message": "User deleted",
 	})
 }
@@ -168,6 +177,7 @@ func (h *AdminHandler) GetAll(c *fiber.Ctx) error {
 		_admins, err := h.service.GetAll()
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "SOMETHING_WENT_WRONG",
 				"message": "Something went wrong",
 			})
 		}
@@ -189,11 +199,12 @@ func (h *AdminHandler) GetAll(c *fiber.Ctx) error {
 				DeletedAt: deletedAt,
 			})
 		}
-		return c.Status(fiber.StatusOK).JSON(resAdmins)
+		return c.JSON(resAdmins)
 	} else {
 		_admins, err := h.service.GetOnlyActive()
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "SOMETHING_WENT_WRONG",
 				"message": "Something went wrong",
 			})
 		}
@@ -209,7 +220,7 @@ func (h *AdminHandler) GetAll(c *fiber.Ctx) error {
 				FullName: admin.FullName,
 			})
 		}
-		return c.Status(fiber.StatusOK).JSON(resAdmins)
+		return c.JSON(resAdmins)
 	}
 
 }
