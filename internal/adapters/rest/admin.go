@@ -2,7 +2,6 @@ package rest
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
@@ -126,7 +125,6 @@ func (h *AdminHandler) UpdateById(c *fiber.Ctx) error {
 
 	err = h.service.UpdateById(parsedId, payload)
 	if err != nil {
-		fmt.Println(err)
 		if errors.Is(err, domain.ErrAdminNotFound) {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"message": "User not found",
