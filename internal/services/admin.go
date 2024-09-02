@@ -20,17 +20,17 @@ type AdminRepository interface {
 	GetOnlyActive() ([]entities.Admin, error)
 }
 
-type AdminService struct {
+type adminService struct {
 	repo AdminRepository
 }
 
-func NewAdminService(repo AdminRepository) *AdminService {
-	return &AdminService{
+func NewAdminService(repo AdminRepository) *adminService {
+	return &adminService{
 		repo: repo,
 	}
 }
 
-func (s *AdminService) GetById(id string) (*entities.Admin, error) {
+func (s *adminService) GetById(id string) (*entities.Admin, error) {
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
@@ -40,11 +40,11 @@ func (s *AdminService) GetById(id string) (*entities.Admin, error) {
 	return record, err
 }
 
-func (s *AdminService) GetByEmail(email string) (*entities.Admin, error) {
+func (s *adminService) GetByEmail(email string) (*entities.Admin, error) {
 	return s.repo.GetByEmail(email)
 }
 
-func (s *AdminService) Create(r *requests.AdminRequest) error {
+func (s *adminService) Create(r *requests.AdminRequest) error {
 	record, err := s.GetByEmail(r.Email)
 	if err != nil {
 		if !errors.Is(err, pgx.ErrNoRows) {
@@ -64,7 +64,7 @@ func (s *AdminService) Create(r *requests.AdminRequest) error {
 	return s.repo.Create(value)
 }
 
-func (s *AdminService) DeleteById(id string) error {
+func (s *adminService) DeleteById(id string) error {
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
 		return err
@@ -72,14 +72,14 @@ func (s *AdminService) DeleteById(id string) error {
 	return s.repo.DeleteById(parsedId)
 }
 
-func (s *AdminService) UpdateById(id uuid.UUID, value *requests.AdminRequest) error {
+func (s *adminService) UpdateById(id uuid.UUID, value *requests.AdminRequest) error {
 	return s.repo.UpdateById(id, value)
 }
 
-func (s *AdminService) GetAll() ([]entities.Admin, error) {
+func (s *adminService) GetAll() ([]entities.Admin, error) {
 	return s.repo.GetAll()
 }
 
-func (s *AdminService) GetOnlyActive() ([]entities.Admin, error) {
+func (s *adminService) GetOnlyActive() ([]entities.Admin, error) {
 	return s.repo.GetOnlyActive()
 }

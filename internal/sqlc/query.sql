@@ -43,3 +43,9 @@ DELETE FROM events WHERE id = $1;
 UPDATE events
 SET name = $1, place = $2, date = $3, host = $4
 WHERE id = $5;
+
+-- name: CreateStaffRecord :exec
+INSERT INTO staff_records (event_id,staff_id) VALUES ($1,$2);
+
+-- name: DeleteStaffById :exec
+DELETE FROM staff_records WHERE id = $1;

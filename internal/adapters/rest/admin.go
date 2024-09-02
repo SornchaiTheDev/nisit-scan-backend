@@ -23,14 +23,14 @@ type AdminService interface {
 	GetOnlyActive() ([]entities.Admin, error)
 }
 
-type AdminHandler struct {
+type adminHandler struct {
 	app     *fiber.App
 	service AdminService
 }
 
 func NewAdminHandler(app *fiber.App, service AdminService) {
 
-	handler := &AdminHandler{
+	handler := &adminHandler{
 		app:     app,
 		service: service,
 	}
@@ -50,7 +50,7 @@ func NewAdminHandler(app *fiber.App, service AdminService) {
 	admin.Put("/:id", handler.UpdateById)
 }
 
-func (h *AdminHandler) GetById(c *fiber.Ctx) error {
+func (h *adminHandler) GetById(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	record, err := h.service.GetById(id)
@@ -74,7 +74,7 @@ func (h *AdminHandler) GetById(c *fiber.Ctx) error {
 	})
 }
 
-func (h *AdminHandler) Create(c *fiber.Ctx) error {
+func (h *adminHandler) Create(c *fiber.Ctx) error {
 	var r requests.AdminRequest
 	err := c.BodyParser(&r)
 	if err != nil {
@@ -103,7 +103,7 @@ func (h *AdminHandler) Create(c *fiber.Ctx) error {
 	})
 }
 
-func (h *AdminHandler) UpdateById(c *fiber.Ctx) error {
+func (h *adminHandler) UpdateById(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var request requests.AdminRequest
@@ -144,7 +144,7 @@ func (h *AdminHandler) UpdateById(c *fiber.Ctx) error {
 	})
 }
 
-func (h *AdminHandler) DeleteById(c *fiber.Ctx) error {
+func (h *adminHandler) DeleteById(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	err := h.service.DeleteById(id)
@@ -167,7 +167,7 @@ func (h *AdminHandler) DeleteById(c *fiber.Ctx) error {
 	})
 }
 
-func (h *AdminHandler) GetAll(c *fiber.Ctx) error {
+func (h *adminHandler) GetAll(c *fiber.Ctx) error {
 
 	show := c.Query("show")
 

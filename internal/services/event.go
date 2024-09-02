@@ -20,12 +20,12 @@ type EventRepository interface {
 	UpdateById(id uuid.UUID, e *entities.Event) error
 }
 
-type EventService struct {
+type eventService struct {
 	repo EventRepository
 }
 
-func NewEventService(repo EventRepository) *EventService {
-	return &EventService{
+func NewEventService(repo EventRepository) *eventService {
+	return &eventService{
 		repo: repo,
 	}
 }
@@ -47,7 +47,7 @@ func parseRequestToEntity(r *requests.EventRequest) (*entities.Event, error) {
 	return event, nil
 }
 
-func (s *EventService) isEventExist(id *uuid.UUID) error {
+func (s *eventService) isEventExist(id *uuid.UUID) error {
 	_, err := s.repo.GetById(*id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -57,11 +57,11 @@ func (s *EventService) isEventExist(id *uuid.UUID) error {
 	return nil
 }
 
-func (s *EventService) GetAll() ([]*entities.Event, error) {
+func (s *eventService) GetAll() ([]*entities.Event, error) {
 	return s.repo.GetAll()
 }
 
-func (s *EventService) GetById(id string) (*entities.Event, error) {
+func (s *eventService) GetById(id string) (*entities.Event, error) {
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (s *EventService) GetById(id string) (*entities.Event, error) {
 	return s.repo.GetById(parsedId)
 }
 
-func (s *EventService) Create(r *requests.EventRequest, adminId string) error {
+func (s *eventService) Create(r *requests.EventRequest, adminId string) error {
 	event, err := parseRequestToEntity(r)
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (s *EventService) Create(r *requests.EventRequest, adminId string) error {
 	return s.repo.Create(event, adminId)
 }
 
-func (s *EventService) DeleteById(id string) error {
+func (s *eventService) DeleteById(id string) error {
 	parsedId, err := libs.ParseUUID(id)
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (s *EventService) DeleteById(id string) error {
 	return s.repo.DeleteById(*parsedId)
 }
 
-func (s *EventService) UpdateById(id string, r *requests.EventRequest) error {
+func (s *eventService) UpdateById(id string, r *requests.EventRequest) error {
 	parsedId, err := libs.ParseUUID(id)
 	if err != nil {
 		return err

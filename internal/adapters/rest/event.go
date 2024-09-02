@@ -19,13 +19,13 @@ type EventService interface {
 	UpdateById(id string, r *requests.EventRequest) error
 }
 
-type EventHandler struct {
+type eventHandler struct {
 	app     *fiber.App
 	service EventService
 }
 
 func NewEventHandler(app *fiber.App, service EventService) {
-	handler := EventHandler{
+	handler := eventHandler{
 		app:     app,
 		service: service,
 	}
@@ -38,7 +38,7 @@ func NewEventHandler(app *fiber.App, service EventService) {
 	event.Delete("/:id", handler.deleteById)
 }
 
-func (h *EventHandler) create(c *fiber.Ctx) error {
+func (h *eventHandler) create(c *fiber.Ctx) error {
 	var request requests.EventRequest
 	err := c.BodyParser(&request)
 	if err != nil {
@@ -80,7 +80,7 @@ func (h *EventHandler) create(c *fiber.Ctx) error {
 
 }
 
-func (h *EventHandler) getAll(c *fiber.Ctx) error {
+func (h *eventHandler) getAll(c *fiber.Ctx) error {
 	events, err := h.service.GetAll()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -95,7 +95,7 @@ func (h *EventHandler) getAll(c *fiber.Ctx) error {
 	return c.JSON(events)
 }
 
-func (h *EventHandler) getById(c *fiber.Ctx) error {
+func (h *eventHandler) getById(c *fiber.Ctx) error {
 	id := c.Params("id")
 	event, err := h.service.GetById(id)
 	if err != nil {
@@ -115,7 +115,7 @@ func (h *EventHandler) getById(c *fiber.Ctx) error {
 	return c.JSON(event)
 }
 
-func (h *EventHandler) deleteById(c *fiber.Ctx) error {
+func (h *eventHandler) deleteById(c *fiber.Ctx) error {
 	id := c.Params("id")
 	err := h.service.DeleteById(id)
 	if err != nil {
@@ -137,7 +137,7 @@ func (h *EventHandler) deleteById(c *fiber.Ctx) error {
 	})
 }
 
-func (h *EventHandler) updateById(c *fiber.Ctx) error {
+func (h *eventHandler) updateById(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var payload *requests.EventRequest

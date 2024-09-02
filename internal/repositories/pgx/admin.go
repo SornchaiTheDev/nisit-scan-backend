@@ -13,17 +13,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type AdminRepoImpl struct {
+type adminRepoImpl struct {
 	q *sqlc.Queries
 }
 
 func NewAdminRepo(q *sqlc.Queries) services.AdminRepository {
-	return &AdminRepoImpl{
+	return &adminRepoImpl{
 		q: q,
 	}
 }
 
-func (r *AdminRepoImpl) GetById(id uuid.UUID) (*entities.Admin, error) {
+func (r *adminRepoImpl) GetById(id uuid.UUID) (*entities.Admin, error) {
 
 	admin, err := r.q.GetAdminById(context.Background(), id)
 
@@ -36,7 +36,7 @@ func (r *AdminRepoImpl) GetById(id uuid.UUID) (*entities.Admin, error) {
 	return parsedAdmin, err
 }
 
-func (r *AdminRepoImpl) Create(e *entities.Admin) error {
+func (r *adminRepoImpl) Create(e *entities.Admin) error {
 	admin := sqlc.CreateAdminParams{
 		Email:    e.Email,
 		FullName: e.FullName,
@@ -44,7 +44,7 @@ func (r *AdminRepoImpl) Create(e *entities.Admin) error {
 	return r.q.CreateAdmin(context.Background(), admin)
 }
 
-func (r *AdminRepoImpl) DeleteById(id uuid.UUID) error {
+func (r *adminRepoImpl) DeleteById(id uuid.UUID) error {
 
 	record, err := r.GetById(id)
 
@@ -68,7 +68,7 @@ func (r *AdminRepoImpl) DeleteById(id uuid.UUID) error {
 
 }
 
-func (r *AdminRepoImpl) UpdateById(id uuid.UUID, value *requests.AdminRequest) error {
+func (r *adminRepoImpl) UpdateById(id uuid.UUID, value *requests.AdminRequest) error {
 
 	record, err := r.GetById(id)
 
@@ -89,7 +89,7 @@ func (r *AdminRepoImpl) UpdateById(id uuid.UUID, value *requests.AdminRequest) e
 	return r.q.UpdateAdminById(context.Background(), payload)
 }
 
-func (r *AdminRepoImpl) GetAll() ([]entities.Admin, error) {
+func (r *adminRepoImpl) GetAll() ([]entities.Admin, error) {
 
 	admins, err := r.q.GetAllAdmins(context.Background())
 	if err != nil {
@@ -110,7 +110,7 @@ func (r *AdminRepoImpl) GetAll() ([]entities.Admin, error) {
 	return parsedAdmins, nil
 }
 
-func (r *AdminRepoImpl) GetOnlyActive() ([]entities.Admin, error) {
+func (r *adminRepoImpl) GetOnlyActive() ([]entities.Admin, error) {
 
 	admins, err := r.q.GetActiveAdmins(context.Background())
 
@@ -128,7 +128,7 @@ func (r *AdminRepoImpl) GetOnlyActive() ([]entities.Admin, error) {
 	return parsedAdmins, err
 }
 
-func (r *AdminRepoImpl) GetByEmail(email string) (*entities.Admin, error) {
+func (r *adminRepoImpl) GetByEmail(email string) (*entities.Admin, error) {
 	admin, err := r.q.GetAdminByEmail(context.Background(), email)
 	if err != nil {
 		return nil, err

@@ -11,17 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type EventRepoImpl struct {
+type eventRepoImpl struct {
 	q *sqlc.Queries
 }
 
 func NewEventRepo(q *sqlc.Queries) services.EventRepository {
-	return &EventRepoImpl{
+	return &eventRepoImpl{
 		q: q,
 	}
 }
 
-func (e *EventRepoImpl) GetAll() ([]*entities.Event, error) {
+func (e *eventRepoImpl) GetAll() ([]*entities.Event, error) {
 	events, err := e.q.GetAllEvents(context.Background())
 
 	var parsedEvents []*entities.Event
@@ -42,7 +42,7 @@ func (e *EventRepoImpl) GetAll() ([]*entities.Event, error) {
 	return parsedEvents, err
 }
 
-func (e *EventRepoImpl) GetById(id uuid.UUID) (*entities.Event, error) {
+func (e *eventRepoImpl) GetById(id uuid.UUID) (*entities.Event, error) {
 	event, err := e.q.GetEventById(context.Background(), id)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (e *EventRepoImpl) GetById(id uuid.UUID) (*entities.Event, error) {
 	return parsedEvent, err
 }
 
-func (e *EventRepoImpl) Create(event *entities.Event, adminId string) error {
+func (e *eventRepoImpl) Create(event *entities.Event, adminId string) error {
 
 	date := pgtype.Date{}
 	date.Scan(event.Date)
@@ -81,13 +81,13 @@ func (e *EventRepoImpl) Create(event *entities.Event, adminId string) error {
 	return err
 }
 
-func (e *EventRepoImpl) DeleteById(id uuid.UUID) error {
+func (e *eventRepoImpl) DeleteById(id uuid.UUID) error {
 	err := e.q.DeleteEventById(context.Background(), id)
 
 	return err
 }
 
-func (e *EventRepoImpl) UpdateById(id uuid.UUID, event *entities.Event) error {
+func (e *eventRepoImpl) UpdateById(id uuid.UUID, event *entities.Event) error {
 	date := pgtype.Date{}
 	date.Scan(event.Date)
 
