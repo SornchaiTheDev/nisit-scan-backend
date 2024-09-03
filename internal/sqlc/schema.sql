@@ -27,8 +27,9 @@ CREATE TABLE staffs (
 );
 
 CREATE TABLE participants (
+	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	barcode VARCHAR(14) NOT NULL,
-	timestamp TIMESTAMP NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	event_id UUID,
 
 	UNIQUE(barcode,event_id),

@@ -26,6 +26,7 @@ type Event struct {
 }
 
 type Participant struct {
+	ID        uuid.UUID
 	Barcode   string
 	Timestamp pgtype.Timestamp
 	EventID   uuid.UUID

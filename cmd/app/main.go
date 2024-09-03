@@ -34,18 +34,20 @@ func main() {
 	adminRepo := repositories.NewAdminRepo(q)
 	eventRepo := repositories.NewEventRepo(q)
 	staffRepo := repositories.NewStaffRepository(q)
+	participantRepo := repositories.NewParticipantRepo(q)
 
 	// Init Service
 	adminService := services.NewAdminService(adminRepo)
 	eventService := services.NewEventService(eventRepo)
 	staffService := services.NewStaffService(staffRepo)
+	participantService := services.NewParticipantService(participantRepo)
 
 	port := os.Getenv("PORT")
 
 	app := fiber.New()
 
 	rest.NewAdminHandler(app, adminService)
-	rest.NewEventHandler(app, eventService, staffService)
+	rest.NewEventHandler(app, eventService, staffService, participantService)
 
 	err = app.Listen(fmt.Sprintf(":%s", port))
 	if err != nil {

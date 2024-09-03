@@ -55,3 +55,12 @@ SELECT * FROM staffs WHERE event_id = $1;
 
 -- name: GetStaffById :one
 SELECT * FROM staffs WHERE id = $1;
+
+-- name: CreateParticipantRecord :exec
+INSERT INTO participants (barcode,event_id) VALUES ($1,$2);
+
+-- name: GetParticipantByEventId :many
+SELECT * FROM participants WHERE event_id = $1;
+
+-- name: DeleteParticipantById :exec
+DELETE FROM participants WHERE id = $1;

@@ -49,6 +49,20 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) error 
 	return err
 }
 
+const createParticipantRecord = `-- name: CreateParticipantRecord :exec
+INSERT INTO participants (barcode,event_id) VALUES ($1,$2)
+`
+
+type CreateParticipantRecordParams struct {
+	Barcode string
+	EventID uuid.UUID
+}
+
+func (q *Queries) CreateParticipantRecord(ctx context.Context, arg CreateParticipantRecordParams) error {
+	_, err := q.db.Exec(ctx, createParticipantRecord, arg.Barcode, arg.EventID)
+	return err
+}
+
 const createStaffRecord = `-- name: CreateStaffRecord :exec
 INSERT INTO staffs (email,event_id) VALUES ($1,$2)
 `
@@ -84,6 +98,15 @@ DELETE FROM events WHERE id = $1
 
 func (q *Queries) DeleteEventById(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteEventById, id)
+	return err
+}
+
+const deleteParticipantById = `-- name: DeleteParticipantById :exec
+DELETE FROM participants WHERE id = $1
+`
+
+func (q *Queries) DeleteParticipantById(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteParticipantById, id)
 	return err
 }
 
@@ -272,6 +295,35 @@ func (q *Queries) GetEventById(ctx context.Context, id uuid.UUID) (GetEventByIdR
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const getParticipantByEventId = `-- name: GetParticipantByEventId :many
+SELECT id, barcode, timestamp, event_id FROM participants WHERE event_id = $1
+`
+
+func (q *Queries) GetParticipantByEventId(ctx context.Context, eventID uuid.UUID) ([]Participant, error) {
+	rows, err := q.db.Query(ctx, getParticipantByEventId, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Participant
+	for rows.Next() {
+		var i Participant
+		if err := rows.Scan(
+			&i.ID,
+			&i.Barcode,
+			&i.Timestamp,
+			&i.EventID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getStaffByEventId = `-- name: GetStaffByEventId :many
