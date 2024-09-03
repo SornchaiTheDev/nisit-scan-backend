@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
@@ -10,6 +11,8 @@ import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/services"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -24,8 +27,13 @@ func NewAdminRepo(q *sqlc.Queries) services.AdminRepository {
 }
 
 func (r *adminRepoImpl) GetById(id uuid.UUID) (*entities.Admin, error) {
-
 	admin, err := r.q.GetAdminById(context.Background(), id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, domain.ErrAdminNotFound
+		}
+		return nil, domain.ErrSomethingWentWrong
+	}
 
 	parsedAdmin := &entities.Admin{
 		Id:       admin.ID,
@@ -33,7 +41,7 @@ func (r *adminRepoImpl) GetById(id uuid.UUID) (*entities.Admin, error) {
 		Email:    admin.Email,
 	}
 
-	return parsedAdmin, err
+	return parsedAdmin, nil
 }
 
 func (r *adminRepoImpl) Create(e *entities.Admin) error {
@@ -41,13 +49,23 @@ func (r *adminRepoImpl) Create(e *entities.Admin) error {
 		Email:    e.Email,
 		FullName: e.FullName,
 	}
-	return r.q.CreateAdmin(context.Background(), admin)
+
+	err := r.q.CreateAdmin(context.Background(), admin)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return domain.ErrAdminAlreadyExists
+			}
+		}
+		return domain.ErrSomethingWentWrong
+	}
+	return nil
 }
 
 func (r *adminRepoImpl) DeleteById(id uuid.UUID) error {
 
 	record, err := r.GetById(id)
-
 	if err != nil {
 		return domain.ErrAdminNotFound
 	}
@@ -64,14 +82,16 @@ func (r *adminRepoImpl) DeleteById(id uuid.UUID) error {
 		DeletedAt: deletedAt,
 	}
 
-	return r.q.DeleteAdminById(context.Background(), payload)
+	err = r.q.DeleteAdminById(context.Background(), payload)
+	if err != nil {
+		return domain.ErrSomethingWentWrong
+	}
 
+	return nil
 }
 
 func (r *adminRepoImpl) UpdateById(id uuid.UUID, value *requests.AdminRequest) error {
-
 	record, err := r.GetById(id)
-
 	if err != nil {
 		return domain.ErrAdminNotFound
 	}
@@ -86,7 +106,11 @@ func (r *adminRepoImpl) UpdateById(id uuid.UUID, value *requests.AdminRequest) e
 		Email:    value.Email,
 	}
 
-	return r.q.UpdateAdminById(context.Background(), payload)
+	err = r.q.UpdateAdminById(context.Background(), payload)
+	if err != nil {
+		return domain.ErrSomethingWentWrong
+	}
+	return nil
 }
 
 func (r *adminRepoImpl) GetAll() ([]entities.Admin, error) {
@@ -113,6 +137,9 @@ func (r *adminRepoImpl) GetAll() ([]entities.Admin, error) {
 func (r *adminRepoImpl) GetOnlyActive() ([]entities.Admin, error) {
 
 	admins, err := r.q.GetActiveAdmins(context.Background())
+	if err != nil {
+		return nil, domain.ErrSomethingWentWrong
+	}
 
 	parsedAdmins := []entities.Admin{}
 
@@ -125,13 +152,13 @@ func (r *adminRepoImpl) GetOnlyActive() ([]entities.Admin, error) {
 		})
 	}
 
-	return parsedAdmins, err
+	return parsedAdmins, nil
 }
 
 func (r *adminRepoImpl) GetByEmail(email string) (*entities.Admin, error) {
 	admin, err := r.q.GetAdminByEmail(context.Background(), email)
 	if err != nil {
-		return nil, err
+		return nil, domain.ErrAdminNotFound
 	}
 
 	adminEntity := &entities.Admin{

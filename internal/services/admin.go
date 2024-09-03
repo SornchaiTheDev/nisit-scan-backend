@@ -7,7 +7,6 @@ import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 type AdminRepository interface {
@@ -33,7 +32,7 @@ func NewAdminService(repo AdminRepository) *adminService {
 func (s *adminService) GetById(id string) (*entities.Admin, error) {
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
-		return nil, err
+		return nil, domain.ErrCannotParseUUID
 	}
 
 	record, err := s.repo.GetById(parsedId)
@@ -47,7 +46,7 @@ func (s *adminService) GetByEmail(email string) (*entities.Admin, error) {
 func (s *adminService) Create(r *requests.AdminRequest) error {
 	record, err := s.GetByEmail(r.Email)
 	if err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if !errors.Is(err, domain.ErrAdminNotFound) {
 			return err
 		}
 	}
@@ -67,13 +66,18 @@ func (s *adminService) Create(r *requests.AdminRequest) error {
 func (s *adminService) DeleteById(id string) error {
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
-		return err
+		return domain.ErrCannotParseUUID
 	}
 	return s.repo.DeleteById(parsedId)
 }
 
-func (s *adminService) UpdateById(id uuid.UUID, value *requests.AdminRequest) error {
-	return s.repo.UpdateById(id, value)
+func (s *adminService) UpdateById(id string, value *requests.AdminRequest) error {
+	parsedId, err := uuid.Parse(id)
+	if err != nil {
+		return domain.ErrCannotParseUUID
+	}
+
+	return s.repo.UpdateById(parsedId, value)
 }
 
 func (s *adminService) GetAll() ([]entities.Admin, error) {

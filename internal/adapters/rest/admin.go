@@ -10,15 +10,13 @@ import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/responses"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 type AdminService interface {
 	GetById(id string) (*entities.Admin, error)
 	Create(r *requests.AdminRequest) error
 	DeleteById(id string) error
-	UpdateById(id uuid.UUID, value *requests.AdminRequest) error
+	UpdateById(id string, value *requests.AdminRequest) error
 	GetAll() ([]entities.Admin, error)
 	GetOnlyActive() ([]entities.Admin, error)
 }
@@ -55,16 +53,25 @@ func (h *adminHandler) GetById(c *fiber.Ctx) error {
 
 	record, err := h.service.GetById(id)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		switch {
+		case errors.Is(err, domain.ErrCannotParseUUID):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"code":    "INVALID_REQUEST",
+				"message": "Cannot parse uuid",
+			})
+		case errors.Is(err, domain.ErrAdminNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"code":    "USER_NOT_FOUND",
 				"message": "User not found",
 			})
-		}
 
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err,
-		})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "SOMETHING_WENT_WRONG",
+				"message": "Something went wrong",
+			})
+
+		}
 	}
 
 	return c.Status(fiber.StatusOK).JSON(responses.AdminResponse{
@@ -76,25 +83,26 @@ func (h *adminHandler) GetById(c *fiber.Ctx) error {
 
 func (h *adminHandler) Create(c *fiber.Ctx) error {
 	var r requests.AdminRequest
-	err := c.BodyParser(&r)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err,
+	if err := c.BodyParser(&r); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"code":    "INVALIAD_REQUEST",
+			"message": "Cannot parse request body",
 		})
 	}
 
 	if err := h.service.Create(&r); err != nil {
-		if errors.Is(err, domain.ErrAdminAlreadyExists) {
+		switch {
+		case errors.Is(err, domain.ErrAdminAlreadyExists):
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "ADMIN_ALREADY_EXISTS",
 				"message": "This email is already exists",
 			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "SOMETHING_WENT_WRONG",
+				"message": "Something went wrong",
+			})
 		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "SOMETHING_WENT_WRONG",
-			"message": "SOMETHING_WENT_WRONG",
-		})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -107,19 +115,10 @@ func (h *adminHandler) UpdateById(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	var request requests.AdminRequest
-
 	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"ccde":    "SOMETHING_WENT_WRONG",
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"ccde":    "INVALID_REQUEST",
 			"message": "Cannot read request body",
-		})
-	}
-
-	parsedId, err := uuid.Parse(id)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"ccde":    "SOMETHING_WENT_WRONG",
-			"message": "Cannot parse id to uuid",
 		})
 	}
 
@@ -128,12 +127,23 @@ func (h *adminHandler) UpdateById(c *fiber.Ctx) error {
 		Email:    request.Email,
 	}
 
-	err = h.service.UpdateById(parsedId, payload)
+	err := h.service.UpdateById(id, payload)
 	if err != nil {
-		if errors.Is(err, domain.ErrAdminNotFound) {
+		switch {
+		case errors.Is(err, domain.ErrCannotParseUUID):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"code":    "INVALID_REQUEST",
+				"message": "Cannot parse uuid",
+			})
+		case errors.Is(err, domain.ErrAdminNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"ccde":    "USER_NOT_FOUND",
 				"message": "User not found",
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "SOMETHING_WENT_WRONG",
+				"message": "Something went wrong",
 			})
 		}
 	}
@@ -149,16 +159,23 @@ func (h *adminHandler) DeleteById(c *fiber.Ctx) error {
 
 	err := h.service.DeleteById(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrAdminNotFound) {
+		switch {
+		case errors.Is(err, domain.ErrAdminNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"code":    "USER_NOT_FOUND",
 				"message": "User not found",
 			})
+		case errors.Is(err, domain.ErrCannotParseUUID):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"code":    "INVALID_REQUEST",
+				"message": "Cannot parse uuid",
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "SOMETHING_WENT_WRONG",
+				"message": "Something went wrong",
+			})
 		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err,
-		})
 	}
 
 	return c.JSON(fiber.Map{
@@ -168,7 +185,6 @@ func (h *adminHandler) DeleteById(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) GetAll(c *fiber.Ctx) error {
-
 	show := c.Query("show")
 
 	var admins []entities.Admin
@@ -222,5 +238,4 @@ func (h *adminHandler) GetAll(c *fiber.Ctx) error {
 		}
 		return c.JSON(resAdmins)
 	}
-
 }
