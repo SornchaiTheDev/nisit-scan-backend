@@ -59,8 +59,14 @@ SELECT * FROM staffs WHERE id = $1;
 -- name: CreateParticipantRecord :exec
 INSERT INTO participants (barcode,event_id) VALUES ($1,$2);
 
--- name: GetParticipantByEventId :many
-SELECT * FROM participants WHERE event_id = $1;
+-- name: GetParticipantPagination :many
+SELECT * FROM participants 
+WHERE event_id = $1
+LIMIT $3 OFFSET $2;
+
+-- name: GetParticipantCount :one
+SELECT COUNT(*) FROM participants
+WHERE event_id = $1;
 
 -- name: DeleteParticipantById :exec
 DELETE FROM participants WHERE id = $1;

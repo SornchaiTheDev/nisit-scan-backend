@@ -40,8 +40,13 @@ func (p *participantRepo) AddParticipant(eventId uuid.UUID, barcode string) erro
 	return nil
 }
 
-func (p *participantRepo) GetParticipants(eventId uuid.UUID) ([]*entities.Participant, error) {
-	participants, err := p.q.GetParticipantByEventId(context.Background(), eventId)
+func (p *participantRepo) GetParticipants(eventId uuid.UUID, pageIndex int32, pageSize int32) ([]*entities.Participant, error) {
+	participants, err := p.q.GetParticipantPagination(context.Background(), sqlc.GetParticipantPaginationParams{
+		EventID: eventId,
+		Limit:   pageSize,
+		Offset:  int32(pageIndex),
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -63,4 +68,13 @@ func (p *participantRepo) RemoveParticipant(id uuid.UUID) error {
 		return err
 	}
 	return nil
+}
+
+func (p *participantRepo) CountParticipants(eventId uuid.UUID) (*int64, error) {
+	count, err := p.q.GetParticipantCount(context.Background(), eventId)
+	if err != nil {
+		return nil, domain.ErrSomethingWentWrong
+	}
+
+	return &count, err
 }

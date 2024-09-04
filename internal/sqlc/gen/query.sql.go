@@ -297,12 +297,32 @@ func (q *Queries) GetEventById(ctx context.Context, id uuid.UUID) (GetEventByIdR
 	return i, err
 }
 
-const getParticipantByEventId = `-- name: GetParticipantByEventId :many
-SELECT id, barcode, timestamp, event_id FROM participants WHERE event_id = $1
+const getParticipantCount = `-- name: GetParticipantCount :one
+SELECT COUNT(*) FROM participants
+WHERE event_id = $1
 `
 
-func (q *Queries) GetParticipantByEventId(ctx context.Context, eventID uuid.UUID) ([]Participant, error) {
-	rows, err := q.db.Query(ctx, getParticipantByEventId, eventID)
+func (q *Queries) GetParticipantCount(ctx context.Context, eventID uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, getParticipantCount, eventID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getParticipantPagination = `-- name: GetParticipantPagination :many
+SELECT id, barcode, timestamp, event_id FROM participants 
+WHERE event_id = $1
+LIMIT $3 OFFSET $2
+`
+
+type GetParticipantPaginationParams struct {
+	EventID uuid.UUID
+	Offset  int32
+	Limit   int32
+}
+
+func (q *Queries) GetParticipantPagination(ctx context.Context, arg GetParticipantPaginationParams) ([]Participant, error) {
+	rows, err := q.db.Query(ctx, getParticipantPagination, arg.EventID, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

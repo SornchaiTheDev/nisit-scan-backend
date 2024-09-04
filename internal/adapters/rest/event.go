@@ -2,6 +2,7 @@ package rest
 
 import (
 	"errors"
+	"fmt"
 
 	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
@@ -25,29 +26,27 @@ type StaffService interface {
 	GetAllFromEventId(id string) ([]*entities.Staff, error)
 }
 
-type ParticipantService interface {
-	AddParticipant(eventId string, barcode string) error
-	GetParticipants(eventId string) ([]*entities.Participant, error)
-	RemoveParticipant(id string) error
-}
+// type ParticipantService interface {
+// 	AddParticipant(eventId string, barcode string) error
+// 	GetParticipants(eventId string) ([]*entities.Participant, error)
+// 	RemoveParticipant(id string) error
+// }
 
 type eventHandler struct {
 	app          *fiber.App
 	eventService EventService
 	staffService StaffService
-	partiService ParticipantService
 }
 
-func NewEventHandler(app *fiber.App, eventService EventService, staffSerice StaffService, participantService ParticipantService) {
+func NewEventHandler(app *fiber.App, eventService EventService, staffSerice StaffService) {
 	handler := eventHandler{
 		app:          app,
 		eventService: eventService,
 		staffService: staffSerice,
-		partiService: participantService,
 	}
 
-	event := app.Group("/event")
-	event.Get("/all", handler.getAll)
+	event := app.Group("/events")
+	event.Get("/", handler.getAll)
 	event.Get("/:id", handler.getById)
 	event.Post("/create", handler.create)
 	event.Put("/:id", handler.updateById)
@@ -58,8 +57,8 @@ func NewEventHandler(app *fiber.App, eventService EventService, staffSerice Staf
 	event.Delete("/:id/staff/remove/:staffId", handler.removeStaff)
 
 	// Participant
-	event.Post("/:id/participant/add", handler.addParticipant)
-	event.Delete("/:id/participant/remove/:participantId", handler.removeParticipant)
+	// event.Post("/:id/participant/add", handler.addParticipant)
+	// event.Delete("/:id/participant/remove/:participantId", handler.removeParticipant)
 
 }
 
@@ -108,6 +107,7 @@ func (h *eventHandler) create(c *fiber.Ctx) error {
 func (h *eventHandler) getAll(c *fiber.Ctx) error {
 	events, err := h.eventService.GetAll()
 	if err != nil {
+		fmt.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Some thing went wrong",
 		})
@@ -151,29 +151,14 @@ func (h *eventHandler) getById(c *fiber.Ctx) error {
 		staffs = []*entities.Staff{}
 	}
 
-	participants, err := h.partiService.GetParticipants(id)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "PARTICIPANT_NOT_FOUND",
-				"message": "Participant not found",
-			})
-		}
-	}
-
-	if participants == nil {
-		participants = []*entities.Participant{}
-	}
-
 	return c.JSON(fiber.Map{
-		"id":           event.Id,
-		"name":         event.Name,
-		"place":        event.Place,
-		"date":         event.Date,
-		"host":         event.Host,
-		"owner":        event.Owner,
-		"staffs":       staffs,
-		"participants": participants,
+		"id":     event.Id,
+		"name":   event.Name,
+		"place":  event.Place,
+		"date":   event.Date,
+		"host":   event.Host,
+		"owner":  event.Owner,
+		"staffs": staffs,
 	})
 }
 
@@ -295,64 +280,64 @@ func (h *eventHandler) removeStaff(c *fiber.Ctx) error {
 	})
 }
 
-func (h *eventHandler) addParticipant(c *fiber.Ctx) error {
-	eventId := c.Params("id")
-	var request requests.AddParticipant
-	err := c.BodyParser(&request)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "INVALID_REQUEST",
-			"message": "Invalid request",
-		})
-	}
+// func (h *eventHandler) addParticipant(c *fiber.Ctx) error {
+// 	eventId := c.Params("id")
+// 	var request requests.AddParticipant
+// 	err := c.BodyParser(&request)
+// 	if err != nil {
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 			"code":    "INVALID_REQUEST",
+// 			"message": "Invalid request",
+// 		})
+// 	}
+//
+// 	err = h.partiService.AddParticipant(eventId, request.Barcode)
+// 	if err != nil {
+// 		if errors.Is(err, pgx.ErrNoRows) {
+// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 				"code":    "EVENT_NOT_FOUND",
+// 				"message": "Event not found",
+// 			})
+// 		}
+//
+// 		if errors.Is(err, domain.ErrParticipantAlreadyExists) {
+// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 				"code":    "PARTICIPANT_ALREADY_EXISTS",
+// 				"message": "Participant already exists",
+// 			})
+// 		}
+//
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 			"code":    "SOMETHING_WENT_WRONG",
+// 			"message": "Something went wrong",
+// 		})
+// 	}
+//
+// 	return c.JSON(fiber.Map{
+// 		"code":    "SUCCESS",
+// 		"message": "Participant added successfully",
+// 	})
+// }
 
-	err = h.partiService.AddParticipant(eventId, request.Barcode)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "EVENT_NOT_FOUND",
-				"message": "Event not found",
-			})
-		}
-
-		if errors.Is(err, domain.ErrParticipantAlreadyExists) {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "PARTICIPANT_ALREADY_EXISTS",
-				"message": "Participant already exists",
-			})
-		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "SOMETHING_WENT_WRONG",
-			"message": "Something went wrong",
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"code":    "SUCCESS",
-		"message": "Participant added successfully",
-	})
-}
-
-func (h *eventHandler) removeParticipant(c *fiber.Ctx) error {
-	id := c.Params("participantId")
-	err := h.partiService.RemoveParticipant(id)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "PARTICIPANT_NOT_FOUND",
-				"message": "Participant not found",
-			})
-		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "SOMETHING_WENT_WRONG",
-			"message": "Something went wrong",
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"code":    "SUCCESS",
-		"message": "Participant removed successfully",
-	})
-}
+// func (h *eventHandler) removeParticipant(c *fiber.Ctx) error {
+// 	id := c.Params("participantId")
+// 	err := h.partiService.RemoveParticipant(id)
+// 	if err != nil {
+// 		if errors.Is(err, pgx.ErrNoRows) {
+// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 				"code":    "PARTICIPANT_NOT_FOUND",
+// 				"message": "Participant not found",
+// 			})
+// 		}
+//
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 			"code":    "SOMETHING_WENT_WRONG",
+// 			"message": "Something went wrong",
+// 		})
+// 	}
+//
+// 	return c.JSON(fiber.Map{
+// 		"code":    "SUCCESS",
+// 		"message": "Participant removed successfully",
+// 	})
+// }
