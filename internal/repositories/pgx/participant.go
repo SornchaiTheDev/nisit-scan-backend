@@ -44,7 +44,7 @@ func (p *participantRepo) GetParticipants(eventId uuid.UUID, pageIndex int32, pa
 	participants, err := p.q.GetParticipantPagination(context.Background(), sqlc.GetParticipantPaginationParams{
 		EventID: eventId,
 		Limit:   pageSize,
-		Offset:  int32(pageIndex),
+		Offset:  pageIndex * pageSize,
 	})
 
 	if err != nil {
