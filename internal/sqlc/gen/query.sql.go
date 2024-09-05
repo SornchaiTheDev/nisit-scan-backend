@@ -49,18 +49,9 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) error 
 	return err
 }
 
-const createParticipantRecord = `-- name: CreateParticipantRecord :exec
-INSERT INTO participants (barcode,event_id) VALUES ($1,$2)
-`
-
-type CreateParticipantRecordParams struct {
+type CreateParticipantsRecordParams struct {
 	Barcode string
 	EventID uuid.UUID
-}
-
-func (q *Queries) CreateParticipantRecord(ctx context.Context, arg CreateParticipantRecordParams) error {
-	_, err := q.db.Exec(ctx, createParticipantRecord, arg.Barcode, arg.EventID)
-	return err
 }
 
 const createStaffRecord = `-- name: CreateStaffRecord :exec
@@ -98,15 +89,6 @@ DELETE FROM events WHERE id = $1
 
 func (q *Queries) DeleteEventById(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteEventById, id)
-	return err
-}
-
-const deleteParticipantById = `-- name: DeleteParticipantById :exec
-DELETE FROM participants WHERE id = $1
-`
-
-func (q *Queries) DeleteParticipantById(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteParticipantById, id)
 	return err
 }
 
@@ -299,11 +281,16 @@ func (q *Queries) GetEventById(ctx context.Context, id uuid.UUID) (GetEventByIdR
 
 const getParticipantCount = `-- name: GetParticipantCount :one
 SELECT COUNT(*) FROM participants
-WHERE event_id = $1
+WHERE event_id = $1 AND barcode LIKE $2
 `
 
-func (q *Queries) GetParticipantCount(ctx context.Context, eventID uuid.UUID) (int64, error) {
-	row := q.db.QueryRow(ctx, getParticipantCount, eventID)
+type GetParticipantCountParams struct {
+	EventID uuid.UUID
+	Barcode string
+}
+
+func (q *Queries) GetParticipantCount(ctx context.Context, arg GetParticipantCountParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getParticipantCount, arg.EventID, arg.Barcode)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -311,18 +298,24 @@ func (q *Queries) GetParticipantCount(ctx context.Context, eventID uuid.UUID) (i
 
 const getParticipantPagination = `-- name: GetParticipantPagination :many
 SELECT id, barcode, timestamp, event_id FROM participants 
-WHERE event_id = $1
-LIMIT $3 OFFSET $2
+WHERE event_id = $1 AND barcode LIKE $2
+LIMIT $3 OFFSET $4
 `
 
 type GetParticipantPaginationParams struct {
 	EventID uuid.UUID
-	Offset  int32
+	Barcode string
 	Limit   int32
+	Offset  int32
 }
 
 func (q *Queries) GetParticipantPagination(ctx context.Context, arg GetParticipantPaginationParams) ([]Participant, error) {
-	rows, err := q.db.Query(ctx, getParticipantPagination, arg.EventID, arg.Offset, arg.Limit)
+	rows, err := q.db.Query(ctx, getParticipantPagination,
+		arg.EventID,
+		arg.Barcode,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}

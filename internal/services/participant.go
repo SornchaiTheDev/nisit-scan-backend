@@ -9,10 +9,10 @@ import (
 )
 
 type ParticipantRepository interface {
-	AddParticipant(eventId uuid.UUID, barcode string) error
-	GetParticipants(eventId uuid.UUID, pageIndex int32, pageSize int32) ([]*entities.Participant, error)
-	CountParticipants(evenId uuid.UUID) (*int64, error)
-	RemoveParticipant(id uuid.UUID) error
+	AddParticipants(eventId uuid.UUID, barcode []string) error
+	GetParticipants(eventId uuid.UUID, barcode string, pageIndex int32, pageSize int32) ([]*entities.Participant, error)
+	CountParticipants(evenId uuid.UUID, barcode string) (*int64, error)
+	RemoveParticipant(id []uuid.UUID) error
 }
 
 type participantService struct {
@@ -25,16 +25,16 @@ func NewParticipantService(repo ParticipantRepository) *participantService {
 	}
 }
 
-func (p *participantService) AddParticipant(eventId string, barcode string) error {
+func (p *participantService) AddParticipants(eventId string, barcode []string) error {
 	parsedId, err := uuid.Parse(eventId)
 	if err != nil {
 		return err
 	}
 
-	return p.repo.AddParticipant(parsedId, barcode)
+	return p.repo.AddParticipants(parsedId, barcode)
 }
 
-func (p *participantService) GetParticipants(eventId string, pageIndex string, pageSize string) ([]*entities.Participant, error) {
+func (p *participantService) GetParticipants(eventId string, barcode string, pageIndex string, pageSize string) ([]*entities.Participant, error) {
 	parsedId, err := uuid.Parse(eventId)
 	if err != nil {
 		return nil, domain.ErrCannotParseUUID
@@ -50,7 +50,7 @@ func (p *participantService) GetParticipants(eventId string, pageIndex string, p
 		return nil, domain.ErrSomethingWentWrong
 	}
 
-	participants, err := p.repo.GetParticipants(parsedId, int32(parsedIndex), int32(parsedSize))
+	participants, err := p.repo.GetParticipants(parsedId, barcode, int32(parsedIndex), int32(parsedSize))
 	if err != nil {
 		return nil, err
 	}
@@ -58,22 +58,28 @@ func (p *participantService) GetParticipants(eventId string, pageIndex string, p
 	return participants, nil
 }
 
-func (p *participantService) RemoveParticipant(id string) error {
-	parsedId, err := uuid.Parse(id)
-	if err != nil {
-		return err
+func (p *participantService) RemoveParticipant(ids []string) error {
+	parsedIds := []uuid.UUID{}
+
+	for _, id := range ids {
+		parsedId, err := uuid.Parse(id)
+		if err != nil {
+			return domain.ErrCannotParseUUID
+		}
+		parsedIds = append(parsedIds, parsedId)
 	}
-	return p.repo.RemoveParticipant(parsedId)
+
+	return p.repo.RemoveParticipant(parsedIds)
 }
 
-func (p *participantService) GetCountParticipants(eventId string) (*int64, error) {
+func (p *participantService) GetCountParticipants(eventId string, barcode string) (*int64, error) {
 
 	parsedId, err := uuid.Parse(eventId)
 	if err != nil {
 		return nil, domain.ErrCannotParseUUID
 	}
 
-	count, err := p.repo.CountParticipants(parsedId)
+	count, err := p.repo.CountParticipants(parsedId, barcode)
 	if err != nil {
 		return nil, err
 	}

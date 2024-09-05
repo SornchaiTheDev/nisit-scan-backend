@@ -56,17 +56,17 @@ SELECT * FROM staffs WHERE event_id = $1;
 -- name: GetStaffById :one
 SELECT * FROM staffs WHERE id = $1;
 
--- name: CreateParticipantRecord :exec
+-- name: CreateParticipantsRecord :copyfrom
 INSERT INTO participants (barcode,event_id) VALUES ($1,$2);
 
 -- name: GetParticipantPagination :many
 SELECT * FROM participants 
-WHERE event_id = $1
-LIMIT $3 OFFSET $2;
+WHERE event_id = $1 AND barcode LIKE $2
+LIMIT $3 OFFSET $4;
 
 -- name: GetParticipantCount :one
 SELECT COUNT(*) FROM participants
-WHERE event_id = $1;
+WHERE event_id = $1 AND barcode LIKE $2;
 
--- name: DeleteParticipantById :exec
+-- name: DeleteParticipantsById :batchexec
 DELETE FROM participants WHERE id = $1;
