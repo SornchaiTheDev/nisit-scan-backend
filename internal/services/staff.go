@@ -1,14 +1,15 @@
 package services
 
 import (
+	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
 	"github.com/google/uuid"
 )
 
 type StaffRepository interface {
-	Create(email string, eventId uuid.UUID) error
-	DeleteById(id uuid.UUID) error
+	AddStaffs(email []string, eventId uuid.UUID) error
+	DeleteAll(eventId uuid.UUID) error
 	GetAllFromEvent(id *uuid.UUID) ([]*entities.Staff, error)
 	GetById(id uuid.UUID) (*entities.Staff, error)
 }
@@ -23,27 +24,23 @@ func NewStaffService(repo StaffRepository) *staffService {
 	}
 }
 
-func (s *staffService) Create(email string, eventId string) error {
+func (s *staffService) SetStaffs(emails []string, eventId string) error {
 	parsedId, err := libs.ParseUUID(eventId)
 	if err != nil {
 		return err
 	}
 
-	return s.repo.Create(email, *parsedId)
-}
-
-func (s *staffService) DeleteById(id string) error {
-	parsedId, err := libs.ParseUUID(id)
+	err = s.repo.DeleteAll(*parsedId)
 	if err != nil {
-		return err
+		return domain.ErrSomethingWentWrong
 	}
 
-	_, err = s.repo.GetById(*parsedId)
+	err = s.repo.AddStaffs(emails, *parsedId)
 	if err != nil {
-		return err
+		return domain.ErrSomethingWentWrong
 	}
 
-	return s.repo.DeleteById(*parsedId)
+	return nil
 }
 
 func (s *staffService) GetAllFromEventId(id string) ([]*entities.Staff, error) {
@@ -54,4 +51,3 @@ func (s *staffService) GetAllFromEventId(id string) ([]*entities.Staff, error) {
 
 	return s.repo.GetAllFromEvent(parsedId)
 }
-

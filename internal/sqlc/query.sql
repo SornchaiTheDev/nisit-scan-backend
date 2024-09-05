@@ -44,11 +44,11 @@ UPDATE events
 SET name = $1, place = $2, date = $3, host = $4
 WHERE id = $5;
 
--- name: CreateStaffRecord :exec
+-- name: CreateStaffsRecord :copyfrom
 INSERT INTO staffs (email,event_id) VALUES ($1,$2);
 
--- name: DeleteStaffById :exec
-DELETE FROM staffs WHERE id = $1;
+-- name: DeleteAllStaffFromEvent :exec
+DELETE FROM staffs WHERE event_id = $1;
 
 -- name: GetStaffByEventId :many
 SELECT * FROM staffs WHERE event_id = $1;

@@ -54,18 +54,9 @@ type CreateParticipantsRecordParams struct {
 	EventID uuid.UUID
 }
 
-const createStaffRecord = `-- name: CreateStaffRecord :exec
-INSERT INTO staffs (email,event_id) VALUES ($1,$2)
-`
-
-type CreateStaffRecordParams struct {
+type CreateStaffsRecordParams struct {
 	Email   string
 	EventID uuid.UUID
-}
-
-func (q *Queries) CreateStaffRecord(ctx context.Context, arg CreateStaffRecordParams) error {
-	_, err := q.db.Exec(ctx, createStaffRecord, arg.Email, arg.EventID)
-	return err
 }
 
 const deleteAdminById = `-- name: DeleteAdminById :exec
@@ -83,21 +74,21 @@ func (q *Queries) DeleteAdminById(ctx context.Context, arg DeleteAdminByIdParams
 	return err
 }
 
+const deleteAllStaffFromEvent = `-- name: DeleteAllStaffFromEvent :exec
+DELETE FROM staffs WHERE event_id = $1
+`
+
+func (q *Queries) DeleteAllStaffFromEvent(ctx context.Context, eventID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteAllStaffFromEvent, eventID)
+	return err
+}
+
 const deleteEventById = `-- name: DeleteEventById :exec
 DELETE FROM events WHERE id = $1
 `
 
 func (q *Queries) DeleteEventById(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteEventById, id)
-	return err
-}
-
-const deleteStaffById = `-- name: DeleteStaffById :exec
-DELETE FROM staffs WHERE id = $1
-`
-
-func (q *Queries) DeleteStaffById(ctx context.Context, id uuid.UUID) error {
-	_, err := q.db.Exec(ctx, deleteStaffById, id)
 	return err
 }
 

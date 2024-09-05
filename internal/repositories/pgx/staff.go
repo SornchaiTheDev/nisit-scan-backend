@@ -19,17 +19,22 @@ func NewStaffRepository(q *sqlc.Queries) services.StaffRepository {
 	}
 }
 
-func (s *staffRepository) Create(email string, evnetId uuid.UUID) error {
-	err := s.q.CreateStaffRecord(context.Background(), sqlc.CreateStaffRecordParams{
-		Email:   email,
-		EventID: evnetId,
-	})
+func (s *staffRepository) AddStaffs(email []string, eventId uuid.UUID) error {
+	var staffs []sqlc.CreateStaffsRecordParams
+	for _, e := range email {
+		staffs = append(staffs, sqlc.CreateStaffsRecordParams{
+			Email:   e,
+			EventID: eventId,
+		})
+	}
+
+	_, err := s.q.CreateStaffsRecord(context.Background(), staffs)
 
 	return err
 }
 
-func (s *staffRepository) DeleteById(id uuid.UUID) error {
-	err := s.q.DeleteStaffById(context.Background(), id)
+func (s *staffRepository) DeleteAll(eventId uuid.UUID) error {
+	err := s.q.DeleteAllStaffFromEvent(context.Background(), eventId)
 	return err
 }
 

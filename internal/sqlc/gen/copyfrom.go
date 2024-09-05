@@ -41,3 +41,36 @@ func (r iteratorForCreateParticipantsRecord) Err() error {
 func (q *Queries) CreateParticipantsRecord(ctx context.Context, arg []CreateParticipantsRecordParams) (int64, error) {
 	return q.db.CopyFrom(ctx, []string{"participants"}, []string{"barcode", "event_id"}, &iteratorForCreateParticipantsRecord{rows: arg})
 }
+
+// iteratorForCreateStaffsRecord implements pgx.CopyFromSource.
+type iteratorForCreateStaffsRecord struct {
+	rows                 []CreateStaffsRecordParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForCreateStaffsRecord) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForCreateStaffsRecord) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].Email,
+		r.rows[0].EventID,
+	}, nil
+}
+
+func (r iteratorForCreateStaffsRecord) Err() error {
+	return nil
+}
+
+func (q *Queries) CreateStaffsRecord(ctx context.Context, arg []CreateStaffsRecordParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"staffs"}, []string{"email", "event_id"}, &iteratorForCreateStaffsRecord{rows: arg})
+}

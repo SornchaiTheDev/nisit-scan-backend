@@ -21,16 +21,9 @@ type EventService interface {
 }
 
 type StaffService interface {
-	Create(email string, eventId string) error
-	DeleteById(id string) error
+	SetStaffs(email []string, eventId string) error
 	GetAllFromEventId(id string) ([]*entities.Staff, error)
 }
-
-// type ParticipantService interface {
-// 	AddParticipant(eventId string, barcode string) error
-// 	GetParticipants(eventId string) ([]*entities.Participant, error)
-// 	RemoveParticipant(id string) error
-// }
 
 type eventHandler struct {
 	app          *fiber.App
@@ -53,8 +46,7 @@ func NewEventHandler(app *fiber.App, eventService EventService, staffSerice Staf
 	event.Delete("/:id", handler.deleteById)
 
 	// Staff
-	event.Post("/:id/staff/add", handler.addStaff)
-	event.Delete("/:id/staff/remove/:staffId", handler.removeStaff)
+	event.Post("/:id/staff/set", handler.setStaffs)
 
 	// Participant
 	// event.Post("/:id/participant/add", handler.addParticipant)
@@ -217,7 +209,7 @@ func (h *eventHandler) updateById(c *fiber.Ctx) error {
 	})
 }
 
-func (h *eventHandler) addStaff(c *fiber.Ctx) error {
+func (h *eventHandler) setStaffs(c *fiber.Ctx) error {
 	eventId := c.Params("id")
 	var request requests.CreateStaffRequest
 	err := c.BodyParser(&request)
@@ -228,7 +220,7 @@ func (h *eventHandler) addStaff(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.staffService.Create(request.Email, eventId)
+	err = h.staffService.SetStaffs(request.Email, eventId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -255,27 +247,4 @@ func (h *eventHandler) addStaff(c *fiber.Ctx) error {
 		"message": "Staff added successfully",
 	})
 
-}
-
-func (h *eventHandler) removeStaff(c *fiber.Ctx) error {
-	id := c.Params("staffId")
-	err := h.staffService.DeleteById(id)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "STAFF_NOT_FOUND",
-				"message": "Staff not found",
-			})
-		}
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "SOMETHING_WENT_WRONG",
-			"message": "Something went wrong",
-		})
-	}
-
-	return c.JSON(fiber.Map{
-		"code":    "SUCCESS",
-		"message": "Staff removed successfully",
-	})
 }
