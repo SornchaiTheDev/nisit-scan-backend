@@ -2,6 +2,7 @@ package rest
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
@@ -151,16 +152,35 @@ func (h *adminHandler) DeleteById(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) GetAll(c *fiber.Ctx) error {
-	var r requests.GetAdminsPaginationParams
-	err := c.BodyParser(&r)
+	search := c.Query("search")
+	pageIndexStr := c.Query("pageIndex")
+	pageSizeStr := c.Query("pageSize")
+
+	pageIndex, err := strconv.Atoi(pageIndexStr)
 	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"code":    "INVALID_REQUEST",
-			"message": "Cannot parse request body",
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
 		})
 	}
 
-	admins, err := h.service.GetAll(&r)
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil {
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
+	r := &requests.GetAdminsPaginationParams{
+		Search:    search,
+		PageIndex: int32(pageIndex),
+		PageSize:  int32(pageSize),
+	}
+
+	admins, err := h.service.GetAll(r)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
@@ -168,7 +188,7 @@ func (h *adminHandler) GetAll(c *fiber.Ctx) error {
 		})
 	}
 
-	count, err := h.service.CountAll(&r)
+	count, err := h.service.CountAll(r)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
