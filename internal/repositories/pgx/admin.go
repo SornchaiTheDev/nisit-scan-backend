@@ -141,25 +141,19 @@ func (r *adminRepoImpl) GetAll(req *requests.GetAdminsPaginationParams) ([]entit
 	return parsedAdmins, nil
 }
 
-func (r *adminRepoImpl) GetOnlyActive() ([]entities.Admin, error) {
+func (r *adminRepoImpl) CountAll(req *requests.GetAdminsPaginationParams) (int64, error) {
+	search := fmt.Sprintf("%%%s%%", req.Search)
 
-	admins, err := r.q.GetActiveAdmins(context.Background())
+	count, err := r.q.CountAllAdmins(context.Background(), sqlc.CountAllAdminsParams{
+		Email:    search,
+		FullName: search,
+	})
+
 	if err != nil {
-		return nil, domain.ErrSomethingWentWrong
+		return 0, domain.ErrSomethingWentWrong
 	}
 
-	parsedAdmins := []entities.Admin{}
-
-	for _, admin := range admins {
-		parsedAdmins = append(parsedAdmins, entities.Admin{
-			Id:        admin.ID,
-			FullName:  admin.FullName,
-			Email:     admin.Email,
-			DeletedAt: admin.DeletedAt.Time,
-		})
-	}
-
-	return parsedAdmins, nil
+	return count, nil
 }
 
 func (r *adminRepoImpl) GetByEmail(email string) (*entities.Admin, error) {

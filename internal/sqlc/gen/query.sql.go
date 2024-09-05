@@ -12,6 +12,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countAllAdmins = `-- name: CountAllAdmins :one
+SELECT COUNT(*) FROM admins
+WHERE (email LIKE $1 OR full_name LIKE $2) AND deleted_at IS NULL
+`
+
+type CountAllAdminsParams struct {
+	Email    string
+	FullName string
+}
+
+func (q *Queries) CountAllAdmins(ctx context.Context, arg CountAllAdminsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countAllAdmins, arg.Email, arg.FullName)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAdmin = `-- name: CreateAdmin :exec
 INSERT INTO admins (email,full_name) VALUES ($1,$2)
 `

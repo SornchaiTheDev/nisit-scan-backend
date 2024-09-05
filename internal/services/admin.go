@@ -16,7 +16,7 @@ type AdminRepository interface {
 	DeleteById(id uuid.UUID) error
 	UpdateById(id uuid.UUID, value *requests.AdminRequest) error
 	GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error)
-	GetOnlyActive() ([]entities.Admin, error)
+	CountAll(r *requests.GetAdminsPaginationParams) (int64, error)
 }
 
 type adminService struct {
@@ -89,6 +89,11 @@ func (s *adminService) GetAll(r *requests.GetAdminsPaginationParams) ([]entities
 	return records, nil
 }
 
-func (s *adminService) GetOnlyActive() ([]entities.Admin, error) {
-	return s.repo.GetOnlyActive()
+func (s *adminService) CountAll(r *requests.GetAdminsPaginationParams) (int64, error) {
+	count, err := s.repo.CountAll(r)
+	if err != nil {
+		return 0, domain.ErrSomethingWentWrong
+	}
+
+	return count, nil
 }

@@ -18,7 +18,7 @@ type AdminService interface {
 	DeleteById(id string) error
 	UpdateById(id string, value *requests.AdminRequest) error
 	GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error)
-	GetOnlyActive() ([]entities.Admin, error)
+	CountAll(r *requests.GetAdminsPaginationParams) (int64, error)
 }
 
 type adminHandler struct {
@@ -168,6 +168,14 @@ func (h *adminHandler) GetAll(c *fiber.Ctx) error {
 		})
 	}
 
+	count, err := h.service.CountAll(&r)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
 	resAdmins := []responses.AllAdminResponse{}
 
 	for _, admin := range admins {
@@ -184,5 +192,8 @@ func (h *adminHandler) GetAll(c *fiber.Ctx) error {
 			DeletedAt: deletedAt,
 		})
 	}
-	return c.JSON(resAdmins)
+	return c.JSON(fiber.Map{
+		"admins":    resAdmins,
+		"totalRows": count,
+	})
 }
