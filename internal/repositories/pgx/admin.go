@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
@@ -113,9 +114,15 @@ func (r *adminRepoImpl) UpdateById(id uuid.UUID, value *requests.AdminRequest) e
 	return nil
 }
 
-func (r *adminRepoImpl) GetAll() ([]entities.Admin, error) {
+func (r *adminRepoImpl) GetAll(req *requests.GetAdminsPaginationParams) ([]entities.Admin, error) {
 
-	admins, err := r.q.GetAllAdmins(context.Background())
+	search := fmt.Sprintf("%%%s%%", req.Search)
+	admins, err := r.q.GetAllAdmins(context.Background(), sqlc.GetAllAdminsParams{
+		Email:    search,
+		FullName: search,
+		Offset:   req.PageSize * req.PageIndex,
+		Limit:    req.PageSize,
+	})
 	if err != nil {
 		return nil, err
 	}

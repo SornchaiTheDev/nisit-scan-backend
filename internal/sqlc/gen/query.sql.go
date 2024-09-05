@@ -157,10 +157,24 @@ func (q *Queries) GetAdminById(ctx context.Context, id uuid.UUID) (Admin, error)
 
 const getAllAdmins = `-- name: GetAllAdmins :many
 SELECT id, email, full_name, deleted_at FROM admins
+WHERE (email LIKE $1 OR full_name LIKE $2) AND deleted_at IS NULL
+LIMIT $3 OFFSET $4
 `
 
-func (q *Queries) GetAllAdmins(ctx context.Context) ([]Admin, error) {
-	rows, err := q.db.Query(ctx, getAllAdmins)
+type GetAllAdminsParams struct {
+	Email    string
+	FullName string
+	Limit    int32
+	Offset   int32
+}
+
+func (q *Queries) GetAllAdmins(ctx context.Context, arg GetAllAdminsParams) ([]Admin, error) {
+	rows, err := q.db.Query(ctx, getAllAdmins,
+		arg.Email,
+		arg.FullName,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -17,7 +17,7 @@ type AdminService interface {
 	Create(r *requests.AdminRequest) error
 	DeleteById(id string) error
 	UpdateById(id string, value *requests.AdminRequest) error
-	GetAll() ([]entities.Admin, error)
+	GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error)
 	GetOnlyActive() ([]entities.Admin, error)
 }
 
@@ -33,7 +33,7 @@ func NewAdminHandler(app *fiber.App, service AdminService) {
 		service: service,
 	}
 
-	admin := app.Group("/admin")
+	admin := app.Group("/admins")
 
 	admin.Use(basicauth.New(basicauth.Config{
 		Users: map[string]string{
@@ -41,44 +41,10 @@ func NewAdminHandler(app *fiber.App, service AdminService) {
 		},
 	}))
 
-	admin.Get("/all", handler.GetAll)
-	admin.Get("/:id", handler.GetById)
+	admin.Get("/", handler.GetAll)
 	admin.Post("/", handler.Create)
 	admin.Delete("/:id", handler.DeleteById)
 	admin.Put("/:id", handler.UpdateById)
-}
-
-func (h *adminHandler) GetById(c *fiber.Ctx) error {
-	id := c.Params("id")
-
-	record, err := h.service.GetById(id)
-	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrCannotParseUUID):
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"code":    "INVALID_REQUEST",
-				"message": "Cannot parse uuid",
-			})
-		case errors.Is(err, domain.ErrAdminNotFound):
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"code":    "USER_NOT_FOUND",
-				"message": "User not found",
-			})
-
-		default:
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "SOMETHING_WENT_WRONG",
-				"message": "Something went wrong",
-			})
-
-		}
-	}
-
-	return c.Status(fiber.StatusOK).JSON(responses.AdminResponse{
-		Id:       record.Id,
-		Email:    record.Email,
-		FullName: record.FullName,
-	})
 }
 
 func (h *adminHandler) Create(c *fiber.Ctx) error {
@@ -185,57 +151,38 @@ func (h *adminHandler) DeleteById(c *fiber.Ctx) error {
 }
 
 func (h *adminHandler) GetAll(c *fiber.Ctx) error {
-	show := c.Query("show")
-
-	var admins []entities.Admin
-
-	if show == "all" {
-		_admins, err := h.service.GetAll()
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "SOMETHING_WENT_WRONG",
-				"message": "Something went wrong",
-			})
-		}
-
-		admins = _admins
-		resAdmins := []responses.AllAdminResponse{}
-
-		for _, admin := range admins {
-			var deletedAt *time.Time
-
-			if !admin.DeletedAt.IsZero() {
-				deletedAt = &admin.DeletedAt
-			}
-
-			resAdmins = append(resAdmins, responses.AllAdminResponse{
-				Id:        admin.Id,
-				Email:     admin.Email,
-				FullName:  admin.FullName,
-				DeletedAt: deletedAt,
-			})
-		}
-		return c.JSON(resAdmins)
-	} else {
-		_admins, err := h.service.GetOnlyActive()
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "SOMETHING_WENT_WRONG",
-				"message": "Something went wrong",
-			})
-		}
-
-		admins = _admins
-
-		resAdmins := []responses.AdminResponse{}
-
-		for _, admin := range admins {
-			resAdmins = append(resAdmins, responses.AdminResponse{
-				Id:       admin.Id,
-				Email:    admin.Email,
-				FullName: admin.FullName,
-			})
-		}
-		return c.JSON(resAdmins)
+	var r requests.GetAdminsPaginationParams
+	err := c.BodyParser(&r)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"code":    "INVALID_REQUEST",
+			"message": "Cannot parse request body",
+		})
 	}
+
+	admins, err := h.service.GetAll(&r)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
+	resAdmins := []responses.AllAdminResponse{}
+
+	for _, admin := range admins {
+		var deletedAt *time.Time
+
+		if !admin.DeletedAt.IsZero() {
+			deletedAt = &admin.DeletedAt
+		}
+
+		resAdmins = append(resAdmins, responses.AllAdminResponse{
+			Id:        admin.Id,
+			Email:     admin.Email,
+			FullName:  admin.FullName,
+			DeletedAt: deletedAt,
+		})
+	}
+	return c.JSON(resAdmins)
 }

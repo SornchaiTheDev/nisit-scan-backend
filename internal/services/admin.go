@@ -15,7 +15,7 @@ type AdminRepository interface {
 	Create(admin *entities.Admin) error
 	DeleteById(id uuid.UUID) error
 	UpdateById(id uuid.UUID, value *requests.AdminRequest) error
-	GetAll() ([]entities.Admin, error)
+	GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error)
 	GetOnlyActive() ([]entities.Admin, error)
 }
 
@@ -80,8 +80,13 @@ func (s *adminService) UpdateById(id string, value *requests.AdminRequest) error
 	return s.repo.UpdateById(parsedId, value)
 }
 
-func (s *adminService) GetAll() ([]entities.Admin, error) {
-	return s.repo.GetAll()
+func (s *adminService) GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error) {
+	records, err := s.repo.GetAll(r)
+	if err != nil {
+		return nil, domain.ErrSomethingWentWrong
+	}
+
+	return records, nil
 }
 
 func (s *adminService) GetOnlyActive() ([]entities.Admin, error) {

@@ -1,5 +1,7 @@
 -- name: GetAllAdmins :many
-SELECT * FROM admins;
+SELECT * FROM admins
+WHERE (email LIKE $1 OR full_name LIKE $2) AND deleted_at IS NULL
+LIMIT $3 OFFSET $4;
 
 -- name: GetActiveAdmins :many
 SELECT * FROM admins WHERE deleted_at IS NULL;
