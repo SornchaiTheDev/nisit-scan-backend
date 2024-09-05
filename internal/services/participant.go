@@ -55,6 +55,10 @@ func (p *participantService) GetParticipants(eventId string, barcode string, pag
 		return nil, err
 	}
 
+	if participants == nil {
+		return []*entities.Participant{}, nil
+	}
+
 	return participants, nil
 }
 
