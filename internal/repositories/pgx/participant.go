@@ -23,29 +23,28 @@ func NewParticipantRepo(q *sqlc.Queries) services.ParticipantRepository {
 	}
 }
 
-func (p *participantRepo) AddParticipants(eventId uuid.UUID, barcode []string) error {
+func (p *participantRepo) AddParticipants(eventId uuid.UUID, barcode string) (*entities.Participant, error) {
 
-	participants := make([]sqlc.CreateParticipantsRecordParams, 0)
-
-	for _, b := range barcode {
-		participants = append(participants, sqlc.CreateParticipantsRecordParams{
-			EventID: eventId,
-			Barcode: b,
-		})
-	}
-
-	_, err := p.q.CreateParticipantsRecord(context.Background(), participants)
+	r, err := p.q.CreateParticipantRecord(context.Background(), sqlc.CreateParticipantRecordParams{
+		Barcode: barcode,
+		EventID: eventId,
+	})
 
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
-				return domain.ErrParticipantAlreadyExists
+				return nil, domain.ErrParticipantAlreadyExists
 			}
 		}
-		return err
+		return nil, err
 	}
-	return nil
+
+	return &entities.Participant{
+		Id:        r.ID,
+		Barcode:   r.Barcode,
+		Timestamp: r.Timestamp.Time,
+	}, nil
 }
 
 func (p *participantRepo) GetParticipants(eventId uuid.UUID, barcode string, pageIndex int32, pageSize int32) ([]*entities.Participant, error) {

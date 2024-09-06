@@ -11,11 +11,62 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var (
 	ErrBatchAlreadyClosed = errors.New("batch already closed")
 )
+
+const deleteAdminByIds = `-- name: DeleteAdminByIds :batchexec
+UPDATE admins SET deleted_at = $1 
+WHERE id = $2
+`
+
+type DeleteAdminByIdsBatchResults struct {
+	br     pgx.BatchResults
+	tot    int
+	closed bool
+}
+
+type DeleteAdminByIdsParams struct {
+	DeletedAt pgtype.Timestamp
+	ID        uuid.UUID
+}
+
+func (q *Queries) DeleteAdminByIds(ctx context.Context, arg []DeleteAdminByIdsParams) *DeleteAdminByIdsBatchResults {
+	batch := &pgx.Batch{}
+	for _, a := range arg {
+		vals := []interface{}{
+			a.DeletedAt,
+			a.ID,
+		}
+		batch.Queue(deleteAdminByIds, vals...)
+	}
+	br := q.db.SendBatch(ctx, batch)
+	return &DeleteAdminByIdsBatchResults{br, len(arg), false}
+}
+
+func (b *DeleteAdminByIdsBatchResults) Exec(f func(int, error)) {
+	defer b.br.Close()
+	for t := 0; t < b.tot; t++ {
+		if b.closed {
+			if f != nil {
+				f(t, ErrBatchAlreadyClosed)
+			}
+			continue
+		}
+		_, err := b.br.Exec()
+		if f != nil {
+			f(t, err)
+		}
+	}
+}
+
+func (b *DeleteAdminByIdsBatchResults) Close() error {
+	b.closed = true
+	return b.br.Close()
+}
 
 const deleteParticipantsById = `-- name: DeleteParticipantsById :batchexec
 DELETE FROM participants WHERE id = $1

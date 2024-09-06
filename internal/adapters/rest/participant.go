@@ -12,7 +12,7 @@ import (
 )
 
 type ParticipantService interface {
-	AddParticipants(eventId string, barcode []string) error
+	AddParticipants(eventId string, barcode string) (*entities.Participant, error)
 	GetParticipants(eventId string, barcode string, pageIndex string, pageSize string) ([]*entities.Participant, error)
 	RemoveParticipant(id []string) error
 	GetCountParticipants(eventId string, barcode string) (*int64, error)
@@ -79,7 +79,7 @@ func (h *participantHandler) addParticipant(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.service.AddParticipants(eventId, request.Barcode)
+	r, err := h.service.AddParticipants(eventId, request.Barcode)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -103,8 +103,8 @@ func (h *participantHandler) addParticipant(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"code":    "SUCCESS",
-		"message": "Participant added successfully",
+		"code":        "SUCCESS",
+		"participant": r,
 	})
 }
 

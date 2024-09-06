@@ -66,29 +66,31 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) error 
 	return err
 }
 
-type CreateParticipantsRecordParams struct {
+const createParticipantRecord = `-- name: CreateParticipantRecord :one
+INSERT INTO participants (barcode,event_id) VALUES ($1,$2)
+RETURNING id, barcode, timestamp, event_id
+`
+
+type CreateParticipantRecordParams struct {
 	Barcode string
 	EventID uuid.UUID
+}
+
+func (q *Queries) CreateParticipantRecord(ctx context.Context, arg CreateParticipantRecordParams) (Participant, error) {
+	row := q.db.QueryRow(ctx, createParticipantRecord, arg.Barcode, arg.EventID)
+	var i Participant
+	err := row.Scan(
+		&i.ID,
+		&i.Barcode,
+		&i.Timestamp,
+		&i.EventID,
+	)
+	return i, err
 }
 
 type CreateStaffsRecordParams struct {
 	Email   string
 	EventID uuid.UUID
-}
-
-const deleteAdminById = `-- name: DeleteAdminById :exec
-UPDATE admins SET deleted_at = $1 
-WHERE id = $2
-`
-
-type DeleteAdminByIdParams struct {
-	DeletedAt pgtype.Timestamp
-	ID        uuid.UUID
-}
-
-func (q *Queries) DeleteAdminById(ctx context.Context, arg DeleteAdminByIdParams) error {
-	_, err := q.db.Exec(ctx, deleteAdminById, arg.DeletedAt, arg.ID)
-	return err
 }
 
 const deleteAllStaffFromEvent = `-- name: DeleteAllStaffFromEvent :exec

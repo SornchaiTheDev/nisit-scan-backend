@@ -9,7 +9,7 @@ import (
 )
 
 type ParticipantRepository interface {
-	AddParticipants(eventId uuid.UUID, barcode []string) error
+	AddParticipants(eventId uuid.UUID, barcode string) (*entities.Participant, error)
 	GetParticipants(eventId uuid.UUID, barcode string, pageIndex int32, pageSize int32) ([]*entities.Participant, error)
 	CountParticipants(evenId uuid.UUID, barcode string) (*int64, error)
 	RemoveParticipant(id []uuid.UUID) error
@@ -25,10 +25,10 @@ func NewParticipantService(repo ParticipantRepository) *participantService {
 	}
 }
 
-func (p *participantService) AddParticipants(eventId string, barcode []string) error {
+func (p *participantService) AddParticipants(eventId string, barcode string) (*entities.Participant, error) {
 	parsedId, err := uuid.Parse(eventId)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	return p.repo.AddParticipants(parsedId, barcode)

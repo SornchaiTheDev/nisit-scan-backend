@@ -9,39 +9,6 @@ import (
 	"context"
 )
 
-// iteratorForCreateParticipantsRecord implements pgx.CopyFromSource.
-type iteratorForCreateParticipantsRecord struct {
-	rows                 []CreateParticipantsRecordParams
-	skippedFirstNextCall bool
-}
-
-func (r *iteratorForCreateParticipantsRecord) Next() bool {
-	if len(r.rows) == 0 {
-		return false
-	}
-	if !r.skippedFirstNextCall {
-		r.skippedFirstNextCall = true
-		return true
-	}
-	r.rows = r.rows[1:]
-	return len(r.rows) > 0
-}
-
-func (r iteratorForCreateParticipantsRecord) Values() ([]interface{}, error) {
-	return []interface{}{
-		r.rows[0].Barcode,
-		r.rows[0].EventID,
-	}, nil
-}
-
-func (r iteratorForCreateParticipantsRecord) Err() error {
-	return nil
-}
-
-func (q *Queries) CreateParticipantsRecord(ctx context.Context, arg []CreateParticipantsRecordParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"participants"}, []string{"barcode", "event_id"}, &iteratorForCreateParticipantsRecord{rows: arg})
-}
-
 // iteratorForCreateStaffsRecord implements pgx.CopyFromSource.
 type iteratorForCreateStaffsRecord struct {
 	rows                 []CreateStaffsRecordParams

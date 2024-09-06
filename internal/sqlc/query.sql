@@ -21,7 +21,7 @@ WHERE email = $1 AND deleted_at IS NULL;
 -- name: CreateAdmin :exec
 INSERT INTO admins (email,full_name) VALUES ($1,$2);
 
--- name: DeleteAdminById :exec
+-- name: DeleteAdminByIds :batchexec
 UPDATE admins SET deleted_at = $1 
 WHERE id = $2;
 
@@ -62,8 +62,9 @@ SELECT * FROM staffs WHERE event_id = $1;
 -- name: GetStaffById :one
 SELECT * FROM staffs WHERE id = $1;
 
--- name: CreateParticipantsRecord :copyfrom
-INSERT INTO participants (barcode,event_id) VALUES ($1,$2);
+-- name: CreateParticipantRecord :one
+INSERT INTO participants (barcode,event_id) VALUES ($1,$2)
+RETURNING *;
 
 -- name: GetParticipantPagination :many
 SELECT * FROM participants 
