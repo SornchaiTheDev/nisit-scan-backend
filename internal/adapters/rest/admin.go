@@ -16,7 +16,7 @@ import (
 type AdminService interface {
 	GetById(id string) (*entities.Admin, error)
 	Create(r *requests.AdminRequest) error
-	DeleteById(id string) error
+	DeleteByIds(ids []string) error
 	UpdateById(id string, value *requests.AdminRequest) error
 	GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error)
 	CountAll(r *requests.GetAdminsPaginationParams) (int64, error)
@@ -44,7 +44,7 @@ func NewAdminHandler(app *fiber.App, service AdminService) {
 
 	admin.Get("/", handler.GetAll)
 	admin.Post("/", handler.Create)
-	admin.Delete("/:id", handler.DeleteById)
+	admin.Delete("/", handler.DeleteByIds)
 	admin.Put("/:id", handler.UpdateById)
 }
 
@@ -121,10 +121,14 @@ func (h *adminHandler) UpdateById(c *fiber.Ctx) error {
 	})
 }
 
-func (h *adminHandler) DeleteById(c *fiber.Ctx) error {
-	id := c.Params("id")
+func (h *adminHandler) DeleteByIds(c *fiber.Ctx) error {
+	var ids struct {
+		Id []string `json:"ids"`
+	}
 
-	err := h.service.DeleteById(id)
+	c.BodyParser(&ids)
+
+	err := h.service.DeleteByIds(ids.Id)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrAdminNotFound):
@@ -158,7 +162,6 @@ func (h *adminHandler) GetAll(c *fiber.Ctx) error {
 
 	pageIndex, err := strconv.Atoi(pageIndexStr)
 	if err != nil {
-
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
 			"message": "Something went wrong",

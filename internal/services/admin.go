@@ -13,7 +13,7 @@ type AdminRepository interface {
 	GetById(id uuid.UUID) (*entities.Admin, error)
 	GetByEmail(email string) (*entities.Admin, error)
 	Create(admin *entities.Admin) error
-	DeleteById(id uuid.UUID) error
+	DeleteByIds(id []uuid.UUID) error
 	UpdateById(id uuid.UUID, value *requests.AdminRequest) error
 	GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error)
 	CountAll(r *requests.GetAdminsPaginationParams) (int64, error)
@@ -63,12 +63,17 @@ func (s *adminService) Create(r *requests.AdminRequest) error {
 	return s.repo.Create(value)
 }
 
-func (s *adminService) DeleteById(id string) error {
-	parsedId, err := uuid.Parse(id)
-	if err != nil {
-		return domain.ErrCannotParseUUID
+func (s *adminService) DeleteByIds(ids []string) error {
+	parsedIds := make([]uuid.UUID, 0)
+	for _, id := range ids {
+		parsedId, err := uuid.Parse(id)
+		if err != nil {
+			return domain.ErrCannotParseUUID
+		}
+		parsedIds = append(parsedIds, parsedId)
 	}
-	return s.repo.DeleteById(parsedId)
+
+	return s.repo.DeleteByIds(parsedIds)
 }
 
 func (s *adminService) UpdateById(id string, value *requests.AdminRequest) error {

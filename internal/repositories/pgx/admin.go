@@ -64,26 +64,32 @@ func (r *adminRepoImpl) Create(e *entities.Admin) error {
 	return nil
 }
 
-func (r *adminRepoImpl) DeleteById(id uuid.UUID) error {
+func (r *adminRepoImpl) DeleteByIds(ids []uuid.UUID) error {
 
-	record, err := r.GetById(id)
-	if err != nil {
-		return domain.ErrAdminNotFound
+	payload := make([]sqlc.DeleteAdminByIdsParams, 0)
+
+	for _, id := range ids {
+		deletedAt := pgtype.Timestamp{}
+		deletedAt.Scan(time.Now())
+
+		p := sqlc.DeleteAdminByIdsParams{
+			ID:        id,
+			DeletedAt: deletedAt,
+		}
+		payload = append(payload, p)
 	}
 
-	if !record.DeletedAt.IsZero() {
-		return domain.ErrAdminNotFound
-	}
+	op := r.q.DeleteAdminByIds(context.Background(), payload)
+	defer op.Close()
 
-	deletedAt := pgtype.Timestamp{}
-	deletedAt.Scan(time.Now())
+	var err error
 
-	payload := sqlc.DeleteAdminByIdParams{
-		ID:        id,
-		DeletedAt: deletedAt,
-	}
+	op.Exec(func(i int, _err error) {
+		if err != nil {
+			err = _err
+		}
+	})
 
-	err = r.q.DeleteAdminById(context.Background(), payload)
 	if err != nil {
 		return domain.ErrSomethingWentWrong
 	}
