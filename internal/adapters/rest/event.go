@@ -38,8 +38,8 @@ func NewEventHandler(app *fiber.App, eventService services.EventService, staffSe
 	event.Put("/:id", handler.updateById)
 	event.Delete("/:id", handler.deleteById)
 
-	// Staff
-	event.Post("/:id/staff/set", handler.setStaffs)
+	// Staffs
+	event.Post("/:id/staffs/set", handler.setStaffs)
 
 	// Participants
 	participants := event.Group("/:id/participants")
