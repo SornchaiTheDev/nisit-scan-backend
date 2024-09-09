@@ -67,17 +67,18 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) error 
 }
 
 const createParticipantRecord = `-- name: CreateParticipantRecord :one
-INSERT INTO participants (barcode,event_id) VALUES ($1,$2)
+INSERT INTO participants (barcode,timestamp,event_id) VALUES ($1,$2,$3)
 RETURNING id, barcode, timestamp, event_id
 `
 
 type CreateParticipantRecordParams struct {
-	Barcode string
-	EventID uuid.UUID
+	Barcode   string
+	Timestamp pgtype.Timestamp
+	EventID   uuid.UUID
 }
 
 func (q *Queries) CreateParticipantRecord(ctx context.Context, arg CreateParticipantRecordParams) (Participant, error) {
-	row := q.db.QueryRow(ctx, createParticipantRecord, arg.Barcode, arg.EventID)
+	row := q.db.QueryRow(ctx, createParticipantRecord, arg.Barcode, arg.Timestamp, arg.EventID)
 	var i Participant
 	err := row.Scan(
 		&i.ID,

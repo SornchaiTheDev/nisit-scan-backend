@@ -63,7 +63,7 @@ SELECT * FROM staffs WHERE event_id = $1;
 SELECT * FROM staffs WHERE id = $1;
 
 -- name: CreateParticipantRecord :one
-INSERT INTO participants (barcode,event_id) VALUES ($1,$2)
+INSERT INTO participants (barcode,timestamp,event_id) VALUES ($1,$2,$3)
 RETURNING *;
 
 -- name: GetParticipantPagination :many

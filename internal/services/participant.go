@@ -5,11 +5,12 @@ import (
 
 	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
 	"github.com/google/uuid"
 )
 
 type ParticipantRepository interface {
-	AddParticipants(eventId uuid.UUID, barcode string) (*entities.Participant, error)
+	AddParticipants(eventId uuid.UUID, r *requests.AddParticipant) (*entities.Participant, error)
 	GetParticipants(eventId uuid.UUID, barcode string, pageIndex int32, pageSize int32) ([]*entities.Participant, error)
 	CountParticipants(evenId uuid.UUID, barcode string) (*int64, error)
 	RemoveParticipant(id []uuid.UUID) error
@@ -25,13 +26,13 @@ func NewParticipantService(repo ParticipantRepository) *participantService {
 	}
 }
 
-func (p *participantService) AddParticipants(eventId string, barcode string) (*entities.Participant, error) {
+func (p *participantService) AddParticipants(eventId string, r *requests.AddParticipant) (*entities.Participant, error) {
 	parsedId, err := uuid.Parse(eventId)
 	if err != nil {
 		return nil, err
 	}
 
-	return p.repo.AddParticipants(parsedId, barcode)
+	return p.repo.AddParticipants(parsedId, r)
 }
 
 func (p *participantService) GetParticipants(eventId string, barcode string, pageIndex string, pageSize string) ([]*entities.Participant, error) {

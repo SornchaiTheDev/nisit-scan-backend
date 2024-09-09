@@ -7,10 +7,12 @@ import (
 
 	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/services"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type participantRepo struct {
@@ -23,11 +25,18 @@ func NewParticipantRepo(q *sqlc.Queries) services.ParticipantRepository {
 	}
 }
 
-func (p *participantRepo) AddParticipants(eventId uuid.UUID, barcode string) (*entities.Participant, error) {
+func (p *participantRepo) AddParticipants(eventId uuid.UUID, r *requests.AddParticipant) (*entities.Participant, error) {
 
-	r, err := p.q.CreateParticipantRecord(context.Background(), sqlc.CreateParticipantRecordParams{
-		Barcode: barcode,
-		EventID: eventId,
+	t := pgtype.Timestamp{}
+	err := t.Scan(r.Timestamp)
+	if err != nil {
+		return nil, domain.ErrSomethingWentWrong
+	}
+
+	c, err := p.q.CreateParticipantRecord(context.Background(), sqlc.CreateParticipantRecordParams{
+		Barcode:   r.Barcode,
+		Timestamp: t,
+		EventID:   eventId,
 	})
 
 	if err != nil {
@@ -41,9 +50,9 @@ func (p *participantRepo) AddParticipants(eventId uuid.UUID, barcode string) (*e
 	}
 
 	return &entities.Participant{
-		Id:        r.ID,
-		Barcode:   r.Barcode,
-		Timestamp: r.Timestamp.Time,
+		Id:        c.ID,
+		Barcode:   c.Barcode,
+		Timestamp: c.Timestamp.Time,
 	}, nil
 }
 

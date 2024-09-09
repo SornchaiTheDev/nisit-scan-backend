@@ -2,7 +2,6 @@ package rest
 
 import (
 	"errors"
-	"log"
 
 	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
@@ -11,12 +10,12 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type ParticipantService interface {
-	AddParticipants(eventId string, barcode string) (*entities.Participant, error)
-	GetParticipants(eventId string, barcode string, pageIndex string, pageSize string) ([]*entities.Participant, error)
-	RemoveParticipant(id []string) error
-	GetCountParticipants(eventId string, barcode string) (*int64, error)
-}
+// type ParticipantService interface {
+// 	AddParticipants(eventId string, r *requests.AddParticipant) (*entities.Participant, error)
+// 	GetParticipants(eventId string, barcode string, pageIndex string, pageSize string) ([]*entities.Participant, error)
+// 	RemoveParticipant(id []string) error
+// 	GetCountParticipants(eventId string, barcode string) (*int64, error)
+// }
 
 type participantHandler struct {
 	app     *fiber.App
@@ -31,7 +30,7 @@ func NewParticipantHandler(app *fiber.App, service ParticipantService) {
 
 	participants := app.Group("/participants")
 	participants.Get("/:eventId", handler.getByPage)
-	participants.Post("/:eventId/add", handler.addParticipant)
+	participants.Post("/:eventId", handler.addParticipant)
 	participants.Post("/:eventId/remove", handler.removeParticipant)
 }
 
@@ -54,8 +53,6 @@ func (h *participantHandler) getByPage(c *fiber.Ctx) error {
 
 	count, err := h.service.GetCountParticipants(eventId, barcode)
 	if err != nil {
-
-		log.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "INTERNAL_SERVER_ERROR",
 			"message": "Internal server error",
@@ -70,6 +67,7 @@ func (h *participantHandler) getByPage(c *fiber.Ctx) error {
 
 func (h *participantHandler) addParticipant(c *fiber.Ctx) error {
 	eventId := c.Params("eventId")
+
 	var request requests.AddParticipant
 	err := c.BodyParser(&request)
 	if err != nil {
@@ -79,7 +77,7 @@ func (h *participantHandler) addParticipant(c *fiber.Ctx) error {
 		})
 	}
 
-	r, err := h.service.AddParticipants(eventId, request.Barcode)
+	r, err := h.service.AddParticipants(eventId, &request)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -95,7 +93,6 @@ func (h *participantHandler) addParticipant(c *fiber.Ctx) error {
 			})
 		}
 
-		log.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
 			"message": "Something went wrong",
