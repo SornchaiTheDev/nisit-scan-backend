@@ -68,7 +68,7 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) error 
 
 const createParticipantRecord = `-- name: CreateParticipantRecord :one
 INSERT INTO participants (barcode,timestamp,event_id) VALUES ($1,$2,$3)
-RETURNING id, barcode, timestamp, event_id
+RETURNING barcode, timestamp, event_id
 `
 
 type CreateParticipantRecordParams struct {
@@ -80,12 +80,7 @@ type CreateParticipantRecordParams struct {
 func (q *Queries) CreateParticipantRecord(ctx context.Context, arg CreateParticipantRecordParams) (Participant, error) {
 	row := q.db.QueryRow(ctx, createParticipantRecord, arg.Barcode, arg.Timestamp, arg.EventID)
 	var i Participant
-	err := row.Scan(
-		&i.ID,
-		&i.Barcode,
-		&i.Timestamp,
-		&i.EventID,
-	)
+	err := row.Scan(&i.Barcode, &i.Timestamp, &i.EventID)
 	return i, err
 }
 
@@ -322,7 +317,7 @@ func (q *Queries) GetParticipantCount(ctx context.Context, arg GetParticipantCou
 }
 
 const getParticipantPagination = `-- name: GetParticipantPagination :many
-SELECT id, barcode, timestamp, event_id FROM participants 
+SELECT barcode, timestamp, event_id FROM participants 
 WHERE event_id = $1 AND barcode LIKE $2
 LIMIT $3 OFFSET $4
 `
@@ -348,12 +343,7 @@ func (q *Queries) GetParticipantPagination(ctx context.Context, arg GetParticipa
 	var items []Participant
 	for rows.Next() {
 		var i Participant
-		if err := rows.Scan(
-			&i.ID,
-			&i.Barcode,
-			&i.Timestamp,
-			&i.EventID,
-		); err != nil {
+		if err := rows.Scan(&i.Barcode, &i.Timestamp, &i.EventID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

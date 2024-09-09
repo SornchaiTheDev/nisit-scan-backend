@@ -75,5 +75,5 @@ LIMIT $3 OFFSET $4;
 SELECT COUNT(*) FROM participants
 WHERE event_id = $1 AND barcode LIKE $2;
 
--- name: DeleteParticipantsById :batchexec
-DELETE FROM participants WHERE id = $1;
+-- name: DeleteParticipantsByBarcode :batchexec
+DELETE FROM participants WHERE barcode = $1 AND event_id = $2;

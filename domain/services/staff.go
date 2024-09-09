@@ -1,9 +1,7 @@
 package services
 
 import (
-	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/google/uuid"
 )
 
@@ -25,29 +23,25 @@ func NewStaffService(repo StaffRepository) *staffService {
 }
 
 func (s *staffService) SetStaffs(emails []string, eventId string) error {
-	parsedId, err := libs.ParseUUID(eventId)
+	parsedId, err := uuid.Parse(eventId)
 	if err != nil {
 		return err
 	}
 
-	err = s.repo.DeleteAll(*parsedId)
+	err = s.repo.DeleteAll(parsedId)
 	if err != nil {
-		return domain.ErrSomethingWentWrong
+		return err
 	}
 
-	err = s.repo.AddStaffs(emails, *parsedId)
-	if err != nil {
-		return domain.ErrSomethingWentWrong
-	}
-
-	return nil
+	err = s.repo.AddStaffs(emails, parsedId)
+	return err
 }
 
 func (s *staffService) GetAllFromEventId(id string) ([]*entities.Staff, error) {
-	parsedId, err := libs.ParseUUID(id)
+	parsedId, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.repo.GetAllFromEvent(parsedId)
+	return s.repo.GetAllFromEvent(&parsedId)
 }

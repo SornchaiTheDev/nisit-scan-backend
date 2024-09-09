@@ -4,21 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
-
-type EventService interface {
-	GetAll() ([]*entities.Event, error)
-	GetById(id string) (*entities.Event, error)
-	Create(e *requests.EventRequest, adminId string) error
-	DeleteById(id string) error
-	UpdateById(id string, r *requests.EventRequest) error
-}
 
 type StaffService interface {
 	SetStaffs(email []string, eventId string) error
@@ -26,22 +17,24 @@ type StaffService interface {
 }
 
 type eventHandler struct {
-	app          *fiber.App
-	eventService EventService
-	staffService StaffService
+	app                *fiber.App
+	eventService       services.EventService
+	staffService       StaffService
+	participantService services.ParticipantService
 }
 
-func NewEventHandler(app *fiber.App, eventService EventService, staffSerice StaffService) {
+func NewEventHandler(app *fiber.App, eventService services.EventService, staffService StaffService, participantService services.ParticipantService) {
 	handler := eventHandler{
-		app:          app,
-		eventService: eventService,
-		staffService: staffSerice,
+		app:                app,
+		eventService:       eventService,
+		staffService:       staffService,
+		participantService: participantService,
 	}
 
 	event := app.Group("/events")
 	event.Get("/", handler.getAll)
 	event.Get("/:id", handler.getById)
-	event.Post("/create", handler.create)
+	event.Post("/", handler.create)
 	event.Put("/:id", handler.updateById)
 	event.Delete("/:id", handler.deleteById)
 
@@ -49,11 +42,10 @@ func NewEventHandler(app *fiber.App, eventService EventService, staffSerice Staf
 	event.Post("/:id/staff/set", handler.setStaffs)
 
 	// Participants
-
-	participants := event.Group("/participants")
+	participants := event.Group("/:id/participants")
 	participants.Get("/", handler.getParticipantsPagination)
 	participants.Post("/", handler.addParticipant)
-	participants.Post(":batchdelete", handler.removeParticipant)
+	participants.Post("/batchdelete", handler.removeParticipant)
 
 }
 
@@ -70,20 +62,18 @@ func (h *eventHandler) create(c *fiber.Ctx) error {
 
 	err = h.eventService.Create(&request, adminId)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"code":    "EVENT_ALREADY_EXISTS",
-					"message": "This event is already exists",
-				})
-			}
-			if pgErr.Code == "23503" {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"code":    "ADMIN_ID_ERROR",
-					"message": "This admin id not found",
-				})
-			}
+		switch {
+		case errors.Is(err, nerrors.ErrEventAlreadyExists):
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_ALREADY_EXISTS",
+				"message": "This event is already exists",
+			})
+		case errors.Is(err, nerrors.ErrAdminNotFound):
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "ADMIN_ID_ERROR",
+				"message": "This admin id not found",
+			})
+
 		}
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -119,7 +109,7 @@ func (h *eventHandler) getById(c *fiber.Ctx) error {
 	id := c.Params("id")
 	event, err := h.eventService.GetById(id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, nerrors.ErrEventNotFound) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "EVENT_NOT_FOUND",
 				"message": "Event not found",
@@ -128,13 +118,13 @@ func (h *eventHandler) getById(c *fiber.Ctx) error {
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
-			"message": err,
+			"message": "Something went wrong",
 		})
 	}
 
 	staffs, err := h.staffService.GetAllFromEventId(id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, nerrors.ErrStaffNotFound) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "STAFF_NOT_FOUND",
 				"message": "Staff not found",
@@ -161,7 +151,7 @@ func (h *eventHandler) deleteById(c *fiber.Ctx) error {
 	id := c.Params("id")
 	err := h.eventService.DeleteById(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrEventNotFound) {
+		if errors.Is(err, nerrors.ErrEventNotFound) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "EVENT_NOT_FOUND",
 				"message": "Event not found",
@@ -191,18 +181,21 @@ func (h *eventHandler) updateById(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.eventService.UpdateById(id, payload)
+	_, err = h.eventService.GetById(id)
 	if err != nil {
-		if errors.Is(err, domain.ErrEventNotFound) {
+		if errors.Is(err, nerrors.ErrEventNotFound) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "EVENT_NOT_FOUND",
 				"message": "Event not found",
 			})
 		}
+	}
 
+	err = h.eventService.UpdateById(id, payload)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
-			"message": err,
+			"message": "Something went wrong",
 		})
 	}
 
@@ -225,14 +218,14 @@ func (h *eventHandler) setStaffs(c *fiber.Ctx) error {
 
 	err = h.staffService.SetStaffs(request.Email, eventId)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		switch {
+		case errors.Is(err, nerrors.ErrEventNotFound):
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "EVENT_NOT_FOUND",
 				"message": "Event not found",
 			})
-		}
 
-		if errors.Is(err, domain.ErrStaffAlreadyExists) {
+		case errors.Is(err, nerrors.ErrStaffAlreadyExists):
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "STAFF_ALREADY_EXISTS",
 				"message": "Staff already exists",
@@ -241,7 +234,7 @@ func (h *eventHandler) setStaffs(c *fiber.Ctx) error {
 
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
-			"message": "Something went wrong",
+			"message": err.Error(),
 		})
 	}
 
@@ -255,21 +248,18 @@ func (h *eventHandler) setStaffs(c *fiber.Ctx) error {
 func (h *eventHandler) getParticipantsPagination(c *fiber.Ctx) error {
 	pageIndex := c.Query("pageIndex")
 	pageSize := c.Query("pageSize")
-	eventId := c.Params("eventId")
-	barcode := c.Query("barcode")
+	search := c.Query("search")
+	eventId := c.Params("id")
 
-	participants, err := h.service.GetParticipants(eventId, barcode, pageIndex, pageSize)
+	participants, err := h.participantService.GetParticipants(eventId, search, pageIndex, pageSize)
 	if err != nil {
-		// switch {
-		// case errors.Is(err):
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "INTERNAL_SERVER_ERROR",
 			"message": "Internal server error",
 		})
-		// }
 	}
 
-	count, err := h.service.GetCountParticipants(eventId, barcode)
+	count, err := h.participantService.GetCountParticipants(eventId, search)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "INTERNAL_SERVER_ERROR",
@@ -284,7 +274,7 @@ func (h *eventHandler) getParticipantsPagination(c *fiber.Ctx) error {
 }
 
 func (h *eventHandler) addParticipant(c *fiber.Ctx) error {
-	eventId := c.Params("eventId")
+	eventId := c.Params("id")
 
 	var request requests.AddParticipant
 	err := c.BodyParser(&request)
@@ -295,16 +285,9 @@ func (h *eventHandler) addParticipant(c *fiber.Ctx) error {
 		})
 	}
 
-	r, err := h.service.AddParticipants(eventId, &request)
+	r, err := h.participantService.AddParticipant(eventId, &request)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "EVENT_NOT_FOUND",
-				"message": "Event not found",
-			})
-		}
-
-		if errors.Is(err, domain.ErrParticipantAlreadyExists) {
+		if errors.Is(err, nerrors.ErrParticipantAlreadyExists) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "PARTICIPANT_ALREADY_EXISTS",
 				"message": "Participant already exists",
@@ -324,8 +307,10 @@ func (h *eventHandler) addParticipant(c *fiber.Ctx) error {
 }
 
 func (h *eventHandler) removeParticipant(c *fiber.Ctx) error {
+	eventId := c.Params("id")
+
 	var request struct {
-		Ids []string `json:"ids"`
+		Barcodes []string `json:"barcodes"`
 	}
 
 	if err := c.BodyParser(&request); err != nil {
@@ -335,15 +320,8 @@ func (h *eventHandler) removeParticipant(c *fiber.Ctx) error {
 		})
 	}
 
-	err := h.service.RemoveParticipant(request.Ids)
+	err := h.participantService.RemoveParticipants(eventId, request.Barcodes)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"code":    "PARTICIPANT_NOT_FOUND",
-				"message": "Participant not found",
-			})
-		}
-
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
 			"message": "Something went wrong",

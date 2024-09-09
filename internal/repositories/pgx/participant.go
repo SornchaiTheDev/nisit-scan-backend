@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/services"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -19,18 +19,17 @@ type participantRepo struct {
 	q *sqlc.Queries
 }
 
-func NewParticipantRepo(q *sqlc.Queries) services.ParticipantRepository {
+func NewParticipantRepo(q *sqlc.Queries) repositories.ParticipantRepository {
 	return &participantRepo{
 		q: q,
 	}
 }
 
-func (p *participantRepo) AddParticipants(eventId uuid.UUID, r *requests.AddParticipant) (*entities.Participant, error) {
-
+func (p *participantRepo) AddParticipant(eventId uuid.UUID, r *requests.AddParticipant) (*entities.Participant, error) {
 	t := pgtype.Timestamp{}
 	err := t.Scan(r.Timestamp)
 	if err != nil {
-		return nil, domain.ErrSomethingWentWrong
+		return nil, err
 	}
 
 	c, err := p.q.CreateParticipantRecord(context.Background(), sqlc.CreateParticipantRecordParams{
@@ -43,34 +42,32 @@ func (p *participantRepo) AddParticipants(eventId uuid.UUID, r *requests.AddPart
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == "23505" {
-				return nil, domain.ErrParticipantAlreadyExists
+				return nil, nerrors.ErrParticipantAlreadyExists
 			}
 		}
 		return nil, err
 	}
 
 	return &entities.Participant{
-		Id:        c.ID,
 		Barcode:   c.Barcode,
 		Timestamp: c.Timestamp.Time,
 	}, nil
 }
 
-func (p *participantRepo) GetParticipants(eventId uuid.UUID, barcode string, pageIndex int32, pageSize int32) ([]*entities.Participant, error) {
+func (p *participantRepo) GetParticipants(eventId uuid.UUID, barcode string, pageIndex int32, pageSize int32) ([]entities.Participant, error) {
 	participants, err := p.q.GetParticipantPagination(context.Background(), sqlc.GetParticipantPaginationParams{
 		EventID: eventId,
 		Limit:   pageSize,
 		Offset:  pageIndex * pageSize,
 		Barcode: fmt.Sprintf("%%%s%%", barcode),
 	})
-
 	if err != nil {
 		return nil, err
 	}
-	var result []*entities.Participant
+
+	var result []entities.Participant
 	for _, participant := range participants {
-		result = append(result, &entities.Participant{
-			Id:        participant.ID,
+		result = append(result, entities.Participant{
 			Barcode:   participant.Barcode,
 			Timestamp: participant.Timestamp.Time,
 		})
@@ -79,8 +76,16 @@ func (p *participantRepo) GetParticipants(eventId uuid.UUID, barcode string, pag
 	return result, nil
 }
 
-func (p *participantRepo) RemoveParticipant(ids []uuid.UUID) error {
-	op := p.q.DeleteParticipantsById(context.Background(), ids)
+func (p *participantRepo) RemoveParticipants(eventId uuid.UUID, barcodes []string) error {
+	payload := make([]sqlc.DeleteParticipantsByBarcodeParams, 0)
+	for _, barcode := range barcodes {
+		payload = append(payload, sqlc.DeleteParticipantsByBarcodeParams{
+			Barcode: barcode,
+			EventID: eventId,
+		})
+	}
+
+	op := p.q.DeleteParticipantsByBarcode(context.Background(), payload)
 	defer op.Close()
 
 	var err error
@@ -91,11 +96,7 @@ func (p *participantRepo) RemoveParticipant(ids []uuid.UUID) error {
 		}
 	})
 
-	if err != nil {
-		return domain.ErrSomethingWentWrong
-	}
-
-	return nil
+	return err
 }
 
 func (p *participantRepo) CountParticipants(eventId uuid.UUID, barcode string) (*int64, error) {
@@ -104,7 +105,7 @@ func (p *participantRepo) CountParticipants(eventId uuid.UUID, barcode string) (
 		Barcode: fmt.Sprintf("%%%s%%", barcode),
 	})
 	if err != nil {
-		return nil, domain.ErrSomethingWentWrong
+		return nil, err
 	}
 
 	return &count, err

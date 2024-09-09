@@ -27,11 +27,10 @@ CREATE TABLE staffs (
 );
 
 CREATE TABLE participants (
-	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	barcode VARCHAR(14) NOT NULL,
-	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	timestamp TIMESTAMP NOT NULL,
 	event_id UUID,
 
-	UNIQUE(barcode,event_id),
+	PRIMARY KEY(barcode,event_id),
 	FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
 );

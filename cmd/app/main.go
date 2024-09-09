@@ -6,10 +6,10 @@ import (
 	"log"
 	"os"
 
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/adapters/rest"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
 	repositories "github.com/SornchaiTheDev/nisit-scan-backend/internal/repositories/pgx"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/services"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -51,8 +51,7 @@ func main() {
 	}))
 
 	rest.NewAdminHandler(app, adminService)
-	rest.NewEventHandler(app, eventService, staffService)
-	rest.NewParticipantHandler(app, participantService)
+	rest.NewEventHandler(app, eventService, staffService, participantService)
 
 	err = app.Listen(fmt.Sprintf(":%s", port))
 	if err != nil {

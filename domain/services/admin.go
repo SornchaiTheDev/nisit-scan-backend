@@ -3,9 +3,9 @@ package services
 import (
 	"errors"
 
-	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	"github.com/google/uuid"
 )
 
@@ -32,7 +32,7 @@ func NewAdminService(repo AdminRepository) *adminService {
 func (s *adminService) GetById(id string) (*entities.Admin, error) {
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
-		return nil, domain.ErrCannotParseUUID
+		return nil, nerrors.ErrCannotParseUUID
 	}
 
 	record, err := s.repo.GetById(parsedId)
@@ -46,13 +46,13 @@ func (s *adminService) GetByEmail(email string) (*entities.Admin, error) {
 func (s *adminService) Create(r *requests.AdminRequest) error {
 	record, err := s.GetByEmail(r.Email)
 	if err != nil {
-		if !errors.Is(err, domain.ErrAdminNotFound) {
+		if !errors.Is(err, nerrors.ErrAdminNotFound) {
 			return err
 		}
 	}
 
 	if record != nil {
-		return domain.ErrAdminAlreadyExists
+		return nerrors.ErrAdminAlreadyExists
 	}
 
 	value := &entities.Admin{
@@ -68,7 +68,7 @@ func (s *adminService) DeleteByIds(ids []string) error {
 	for _, id := range ids {
 		parsedId, err := uuid.Parse(id)
 		if err != nil {
-			return domain.ErrCannotParseUUID
+			return nerrors.ErrCannotParseUUID
 		}
 		parsedIds = append(parsedIds, parsedId)
 	}
@@ -79,7 +79,7 @@ func (s *adminService) DeleteByIds(ids []string) error {
 func (s *adminService) UpdateById(id string, value *requests.AdminRequest) error {
 	parsedId, err := uuid.Parse(id)
 	if err != nil {
-		return domain.ErrCannotParseUUID
+		return nerrors.ErrCannotParseUUID
 	}
 
 	return s.repo.UpdateById(parsedId, value)
@@ -88,7 +88,7 @@ func (s *adminService) UpdateById(id string, value *requests.AdminRequest) error
 func (s *adminService) GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error) {
 	records, err := s.repo.GetAll(r)
 	if err != nil {
-		return nil, domain.ErrSomethingWentWrong
+		return nil, nerrors.ErrSomethingWentWrong
 	}
 
 	return records, nil
@@ -97,7 +97,7 @@ func (s *adminService) GetAll(r *requests.GetAdminsPaginationParams) ([]entities
 func (s *adminService) CountAll(r *requests.GetAdminsPaginationParams) (int64, error) {
 	count, err := s.repo.CountAll(r)
 	if err != nil {
-		return 0, domain.ErrSomethingWentWrong
+		return 0, nerrors.ErrSomethingWentWrong
 	}
 
 	return count, nil

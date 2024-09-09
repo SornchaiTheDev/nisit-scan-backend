@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"time"
 
-	domain "github.com/SornchaiTheDev/nisit-scan-backend/domain/errors"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/requests"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/responses"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/responses"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
 )
@@ -59,7 +59,7 @@ func (h *adminHandler) Create(c *fiber.Ctx) error {
 
 	if err := h.service.Create(&r); err != nil {
 		switch {
-		case errors.Is(err, domain.ErrAdminAlreadyExists):
+		case errors.Is(err, nerrors.ErrAdminAlreadyExists):
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "ADMIN_ALREADY_EXISTS",
 				"message": "This email is already exists",
@@ -97,12 +97,12 @@ func (h *adminHandler) UpdateById(c *fiber.Ctx) error {
 	err := h.service.UpdateById(id, payload)
 	if err != nil {
 		switch {
-		case errors.Is(err, domain.ErrCannotParseUUID):
+		case errors.Is(err, nerrors.ErrCannotParseUUID):
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"code":    "INVALID_REQUEST",
 				"message": "Cannot parse uuid",
 			})
-		case errors.Is(err, domain.ErrAdminNotFound):
+		case errors.Is(err, nerrors.ErrAdminNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"ccde":    "USER_NOT_FOUND",
 				"message": "User not found",
@@ -131,12 +131,12 @@ func (h *adminHandler) DeleteByIds(c *fiber.Ctx) error {
 	err := h.service.DeleteByIds(ids.Id)
 	if err != nil {
 		switch {
-		case errors.Is(err, domain.ErrAdminNotFound):
+		case errors.Is(err, nerrors.ErrAdminNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 				"code":    "USER_NOT_FOUND",
 				"message": "User not found",
 			})
-		case errors.Is(err, domain.ErrCannotParseUUID):
+		case errors.Is(err, nerrors.ErrCannotParseUUID):
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"code":    "INVALID_REQUEST",
 				"message": "Cannot parse uuid",

@@ -2,12 +2,15 @@ package repositories
 
 import (
 	"context"
+	"errors"
 
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/entities"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/services"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -45,6 +48,9 @@ func (e *eventRepoImpl) GetAll() ([]*entities.Event, error) {
 func (e *eventRepoImpl) GetById(id uuid.UUID) (*entities.Event, error) {
 	event, err := e.q.GetEventById(context.Background(), id)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nerrors.ErrEventNotFound
+		}
 		return nil, err
 	}
 
@@ -61,11 +67,10 @@ func (e *eventRepoImpl) GetById(id uuid.UUID) (*entities.Event, error) {
 }
 
 func (e *eventRepoImpl) Create(event *entities.Event, adminId string) error {
-
 	date := pgtype.Date{}
 	date.Scan(event.Date)
 
-	parseId, err := libs.ParseUUID(adminId)
+	parseId, err := uuid.Parse(adminId)
 	if err != nil {
 		return err
 	}
@@ -75,10 +80,22 @@ func (e *eventRepoImpl) Create(event *entities.Event, adminId string) error {
 		Place:   event.Place,
 		Date:    date,
 		Host:    event.Host,
-		AdminID: *parseId,
+		AdminID: parseId,
 	})
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return nerrors.ErrEventAlreadyExists
+			}
+			if pgErr.Code == "23503" {
+				return nerrors.ErrAdminNotFound
+			}
+		}
+	}
 
-	return err
+	return nil
+
 }
 
 func (e *eventRepoImpl) DeleteById(id uuid.UUID) error {

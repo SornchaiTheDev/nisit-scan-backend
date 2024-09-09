@@ -68,29 +68,35 @@ func (b *DeleteAdminByIdsBatchResults) Close() error {
 	return b.br.Close()
 }
 
-const deleteParticipantsById = `-- name: DeleteParticipantsById :batchexec
-DELETE FROM participants WHERE id = $1
+const deleteParticipantsByBarcode = `-- name: DeleteParticipantsByBarcode :batchexec
+DELETE FROM participants WHERE barcode = $1 AND event_id = $2
 `
 
-type DeleteParticipantsByIdBatchResults struct {
+type DeleteParticipantsByBarcodeBatchResults struct {
 	br     pgx.BatchResults
 	tot    int
 	closed bool
 }
 
-func (q *Queries) DeleteParticipantsById(ctx context.Context, id []uuid.UUID) *DeleteParticipantsByIdBatchResults {
-	batch := &pgx.Batch{}
-	for _, a := range id {
-		vals := []interface{}{
-			a,
-		}
-		batch.Queue(deleteParticipantsById, vals...)
-	}
-	br := q.db.SendBatch(ctx, batch)
-	return &DeleteParticipantsByIdBatchResults{br, len(id), false}
+type DeleteParticipantsByBarcodeParams struct {
+	Barcode string
+	EventID uuid.UUID
 }
 
-func (b *DeleteParticipantsByIdBatchResults) Exec(f func(int, error)) {
+func (q *Queries) DeleteParticipantsByBarcode(ctx context.Context, arg []DeleteParticipantsByBarcodeParams) *DeleteParticipantsByBarcodeBatchResults {
+	batch := &pgx.Batch{}
+	for _, a := range arg {
+		vals := []interface{}{
+			a.Barcode,
+			a.EventID,
+		}
+		batch.Queue(deleteParticipantsByBarcode, vals...)
+	}
+	br := q.db.SendBatch(ctx, batch)
+	return &DeleteParticipantsByBarcodeBatchResults{br, len(arg), false}
+}
+
+func (b *DeleteParticipantsByBarcodeBatchResults) Exec(f func(int, error)) {
 	defer b.br.Close()
 	for t := 0; t < b.tot; t++ {
 		if b.closed {
@@ -106,7 +112,7 @@ func (b *DeleteParticipantsByIdBatchResults) Exec(f func(int, error)) {
 	}
 }
 
-func (b *DeleteParticipantsByIdBatchResults) Close() error {
+func (b *DeleteParticipantsByBarcodeBatchResults) Close() error {
 	b.closed = true
 	return b.br.Close()
 }
