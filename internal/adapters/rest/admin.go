@@ -2,32 +2,20 @@ package rest
 
 import (
 	"errors"
-	"strconv"
-	"time"
 
-	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
-	"github.com/SornchaiTheDev/nisit-scan-backend/domain/responses"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
 )
 
-type AdminService interface {
-	GetById(id string) (*entities.Admin, error)
-	Create(r *requests.AdminRequest) error
-	DeleteByIds(ids []string) error
-	UpdateById(id string, value *requests.AdminRequest) error
-	GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error)
-	CountAll(r *requests.GetAdminsPaginationParams) (int64, error)
-}
-
 type adminHandler struct {
 	app     *fiber.App
-	service AdminService
+	service services.AdminService
 }
 
-func NewAdminHandler(app *fiber.App, service AdminService) {
+func NewAdminHandler(app *fiber.App, service services.AdminService) {
 
 	handler := &adminHandler{
 		app:     app,
@@ -133,8 +121,8 @@ func (h *adminHandler) DeleteByIds(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, nerrors.ErrAdminNotFound):
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"code":    "USER_NOT_FOUND",
-				"message": "User not found",
+				"code":    "ADMIN_NOT_FOUND",
+				"message": "Some admins not found",
 			})
 		case errors.Is(err, nerrors.ErrCannotParseUUID):
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -157,10 +145,10 @@ func (h *adminHandler) DeleteByIds(c *fiber.Ctx) error {
 
 func (h *adminHandler) GetAll(c *fiber.Ctx) error {
 	search := c.Query("search")
-	pageIndexStr := c.Query("pageIndex")
-	pageSizeStr := c.Query("pageSize")
+	pageIndex := c.Query("pageIndex")
+	pageSize := c.Query("pageSize")
 
-	pageIndex, err := strconv.Atoi(pageIndexStr)
+	admins, err := h.service.GetAll(search, pageIndex, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
@@ -168,22 +156,7 @@ func (h *adminHandler) GetAll(c *fiber.Ctx) error {
 		})
 	}
 
-	pageSize, err := strconv.Atoi(pageSizeStr)
-	if err != nil {
-
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "SOMETHING_WENT_WRONG",
-			"message": "Something went wrong",
-		})
-	}
-
-	r := &requests.GetAdminsPaginationParams{
-		Search:    search,
-		PageIndex: int32(pageIndex),
-		PageSize:  int32(pageSize),
-	}
-
-	admins, err := h.service.GetAll(r)
+	count, err := h.service.CountAll(search)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
@@ -191,32 +164,8 @@ func (h *adminHandler) GetAll(c *fiber.Ctx) error {
 		})
 	}
 
-	count, err := h.service.CountAll(r)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "SOMETHING_WENT_WRONG",
-			"message": "Something went wrong",
-		})
-	}
-
-	resAdmins := []responses.AllAdminResponse{}
-
-	for _, admin := range admins {
-		var deletedAt *time.Time
-
-		if !admin.DeletedAt.IsZero() {
-			deletedAt = &admin.DeletedAt
-		}
-
-		resAdmins = append(resAdmins, responses.AllAdminResponse{
-			Id:        admin.Id,
-			Email:     admin.Email,
-			FullName:  admin.FullName,
-			DeletedAt: deletedAt,
-		})
-	}
 	return c.JSON(fiber.Map{
-		"admins":    resAdmins,
+		"admins":    admins,
 		"totalRows": count,
 	})
 }

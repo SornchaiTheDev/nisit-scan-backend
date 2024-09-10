@@ -6,18 +6,11 @@ import (
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
-
-type EventRepository interface {
-	GetAll() ([]*entities.Event, error)
-	GetById(id uuid.UUID) (*entities.Event, error)
-	Create(e *entities.Event, adminId string) error
-	DeleteById(id uuid.UUID) error
-	UpdateById(id uuid.UUID, e *entities.Event) error
-}
 
 type EventService interface {
 	GetAll() ([]*entities.Event, error)
@@ -28,10 +21,10 @@ type EventService interface {
 }
 
 type eventService struct {
-	repo EventRepository
+	repo repositories.EventRepository
 }
 
-func NewEventService(repo EventRepository) EventService {
+func NewEventService(repo repositories.EventRepository) EventService {
 	return &eventService{
 		repo: repo,
 	}

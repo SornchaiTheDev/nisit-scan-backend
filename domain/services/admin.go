@@ -2,28 +2,31 @@ package services
 
 import (
 	"errors"
+	"strconv"
+	"time"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/responses"
 	"github.com/google/uuid"
 )
 
-type AdminRepository interface {
-	GetById(id uuid.UUID) (*entities.Admin, error)
-	GetByEmail(email string) (*entities.Admin, error)
-	Create(admin *entities.Admin) error
-	DeleteByIds(id []uuid.UUID) error
-	UpdateById(id uuid.UUID, value *requests.AdminRequest) error
-	GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error)
-	CountAll(r *requests.GetAdminsPaginationParams) (int64, error)
+type AdminService interface {
+	GetById(id string) (*entities.Admin, error)
+	Create(r *requests.AdminRequest) error
+	DeleteByIds(ids []string) error
+	UpdateById(id string, value *requests.AdminRequest) error
+	GetAll(search string, pageIndexStr string, pageSizeStr string) ([]responses.AllAdminResponse, error)
+	CountAll(search string) (int64, error)
 }
 
 type adminService struct {
-	repo AdminRepository
+	repo repositories.AdminRepository
 }
 
-func NewAdminService(repo AdminRepository) *adminService {
+func NewAdminService(repo repositories.AdminRepository) *adminService {
 	return &adminService{
 		repo: repo,
 	}
@@ -73,6 +76,16 @@ func (s *adminService) DeleteByIds(ids []string) error {
 		parsedIds = append(parsedIds, parsedId)
 	}
 
+	for _, id := range parsedIds {
+		_, err := s.GetById(id.String())
+		if err != nil {
+			if errors.Is(err, nerrors.ErrAdminNotFound) {
+				return nerrors.ErrAdminNotFound
+			}
+			return err
+		}
+	}
+
 	return s.repo.DeleteByIds(parsedIds)
 }
 
@@ -85,17 +98,51 @@ func (s *adminService) UpdateById(id string, value *requests.AdminRequest) error
 	return s.repo.UpdateById(parsedId, value)
 }
 
-func (s *adminService) GetAll(r *requests.GetAdminsPaginationParams) ([]entities.Admin, error) {
-	records, err := s.repo.GetAll(r)
+func (s *adminService) GetAll(search string, pageIndexStr string, pageSizeStr string) ([]responses.AllAdminResponse, error) {
+
+	pageIndex, err := strconv.Atoi(pageIndexStr)
+	if err != nil {
+		return nil, err
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil {
+		return nil, err
+	}
+
+	r := &requests.GetAdminsPaginationParams{
+		Search:    search,
+		PageIndex: int32(pageIndex),
+		PageSize:  int32(pageSize),
+	}
+
+	admins, err := s.repo.GetAll(r)
 	if err != nil {
 		return nil, nerrors.ErrSomethingWentWrong
+	}
+
+	records := []responses.AllAdminResponse{}
+
+	for _, admin := range admins {
+		var deletedAt *time.Time
+
+		if !admin.DeletedAt.IsZero() {
+			deletedAt = &admin.DeletedAt
+		}
+
+		records = append(records, responses.AllAdminResponse{
+			Id:        admin.Id,
+			Email:     admin.Email,
+			FullName:  admin.FullName,
+			DeletedAt: deletedAt,
+		})
 	}
 
 	return records, nil
 }
 
-func (s *adminService) CountAll(r *requests.GetAdminsPaginationParams) (int64, error) {
-	count, err := s.repo.CountAll(r)
+func (s *adminService) CountAll(search string) (int64, error) {
+	count, err := s.repo.CountAll(search)
 	if err != nil {
 		return 0, nerrors.ErrSomethingWentWrong
 	}

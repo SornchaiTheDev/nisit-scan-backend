@@ -6,7 +6,7 @@ import (
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
-	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -18,7 +18,7 @@ type eventRepoImpl struct {
 	q *sqlc.Queries
 }
 
-func NewEventRepo(q *sqlc.Queries) services.EventRepository {
+func NewEventRepo(q *sqlc.Queries) repositories.EventRepository {
 	return &eventRepoImpl{
 		q: q,
 	}

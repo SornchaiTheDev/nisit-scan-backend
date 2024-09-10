@@ -6,7 +6,7 @@ import (
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
-	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -17,7 +17,7 @@ type staffRepository struct {
 	q *sqlc.Queries
 }
 
-func NewStaffRepository(q *sqlc.Queries) services.StaffRepository {
+func NewStaffRepository(q *sqlc.Queries) repositories.StaffRepository {
 	return &staffRepository{
 		q: q,
 	}

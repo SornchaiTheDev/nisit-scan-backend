@@ -8,8 +8,8 @@ import (
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
-	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,7 +21,7 @@ type adminRepoImpl struct {
 	q *sqlc.Queries
 }
 
-func NewAdminRepo(q *sqlc.Queries) services.AdminRepository {
+func NewAdminRepo(q *sqlc.Queries) repositories.AdminRepository {
 	return &adminRepoImpl{
 		q: q,
 	}
@@ -147,8 +147,8 @@ func (r *adminRepoImpl) GetAll(req *requests.GetAdminsPaginationParams) ([]entit
 	return parsedAdmins, nil
 }
 
-func (r *adminRepoImpl) CountAll(req *requests.GetAdminsPaginationParams) (int64, error) {
-	search := fmt.Sprintf("%%%s%%", req.Search)
+func (r *adminRepoImpl) CountAll(search string) (int64, error) {
+	search = fmt.Sprintf("%%%s%%", search)
 
 	count, err := r.q.CountAllAdmins(context.Background(), sqlc.CountAllAdminsParams{
 		Email:    search,

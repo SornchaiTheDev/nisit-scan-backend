@@ -2,21 +2,15 @@ package services
 
 import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
 	"github.com/google/uuid"
 )
 
-type StaffRepository interface {
-	AddStaffs(email []string, eventId uuid.UUID) error
-	DeleteAll(eventId uuid.UUID) error
-	GetAllFromEvent(id *uuid.UUID) ([]*entities.Staff, error)
-	GetById(id uuid.UUID) (*entities.Staff, error)
-}
-
 type staffService struct {
-	repo StaffRepository
+	repo repositories.StaffRepository
 }
 
-func NewStaffService(repo StaffRepository) *staffService {
+func NewStaffService(repo repositories.StaffRepository) *staffService {
 	return &staffService{
 		repo: repo,
 	}
