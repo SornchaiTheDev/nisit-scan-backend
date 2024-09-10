@@ -47,11 +47,13 @@ func main() {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "http://localhost:3000",
+		AllowOrigins:     "http://localhost:3000",
+		AllowCredentials: true,
 	}))
 
 	rest.NewAdminHandler(app, adminService)
 	rest.NewEventHandler(app, eventService, staffService, participantService)
+	rest.NewGoogleAuthHandler(app, adminService, staffService)
 
 	err = app.Listen(fmt.Sprintf(":%s", port))
 	if err != nil {

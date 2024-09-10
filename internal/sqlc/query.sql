@@ -59,8 +59,8 @@ DELETE FROM staffs WHERE event_id = $1;
 -- name: GetStaffByEventId :many
 SELECT * FROM staffs WHERE event_id = $1;
 
--- name: GetStaffById :one
-SELECT * FROM staffs WHERE id = $1;
+-- name: GetStaffsByEmail :many
+SELECT * FROM staffs WHERE email = $1;
 
 -- name: CreateParticipantRecord :one
 INSERT INTO participants (barcode,timestamp,event_id) VALUES ($1,$2,$3)

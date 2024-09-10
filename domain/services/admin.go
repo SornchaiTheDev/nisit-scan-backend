@@ -15,6 +15,7 @@ import (
 
 type AdminService interface {
 	GetById(id string) (*entities.Admin, error)
+	GetByEmail(email string) (*entities.Admin, error)
 	Create(r *requests.AdminRequest) error
 	DeleteByIds(ids []string) error
 	UpdateById(id string, value *requests.AdminRequest) error

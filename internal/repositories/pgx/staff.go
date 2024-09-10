@@ -74,16 +74,24 @@ func (s *staffRepository) GetAllFromEvent(id *uuid.UUID) ([]*entities.Staff, err
 	return result, nil
 }
 
-func (s *staffRepository) GetById(id uuid.UUID) (*entities.Staff, error) {
-	staff, err := s.q.GetStaffById(context.Background(), id)
+func (s *staffRepository) GetByEmail(email string) ([]entities.Staff, error) {
+	staffs, err := s.q.GetStaffsByEmail(context.Background(), email)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nerrors.ErrStaffNotFound
+		}
 		return nil, err
 	}
 
-	parsedStaff := &entities.Staff{
-		Id:    staff.ID,
-		Email: staff.Email,
+	var parsedStaffs []entities.Staff
+
+	for _, staff := range staffs {
+		parsedStaff := &entities.Staff{
+			Id:    staff.ID,
+			Email: staff.Email,
+		}
+		parsedStaffs = append(parsedStaffs, *parsedStaff)
 	}
 
-	return parsedStaff, nil
+	return parsedStaffs, nil
 }

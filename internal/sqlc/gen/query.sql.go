@@ -378,15 +378,28 @@ func (q *Queries) GetStaffByEventId(ctx context.Context, eventID uuid.UUID) ([]S
 	return items, nil
 }
 
-const getStaffById = `-- name: GetStaffById :one
-SELECT id, email, event_id FROM staffs WHERE id = $1
+const getStaffsByEmail = `-- name: GetStaffsByEmail :many
+SELECT id, email, event_id FROM staffs WHERE email = $1
 `
 
-func (q *Queries) GetStaffById(ctx context.Context, id uuid.UUID) (Staff, error) {
-	row := q.db.QueryRow(ctx, getStaffById, id)
-	var i Staff
-	err := row.Scan(&i.ID, &i.Email, &i.EventID)
-	return i, err
+func (q *Queries) GetStaffsByEmail(ctx context.Context, email string) ([]Staff, error) {
+	rows, err := q.db.Query(ctx, getStaffsByEmail, email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Staff
+	for rows.Next() {
+		var i Staff
+		if err := rows.Scan(&i.ID, &i.Email, &i.EventID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateAdminById = `-- name: UpdateAdminById :exec

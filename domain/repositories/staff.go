@@ -9,5 +9,5 @@ type StaffRepository interface {
 	AddStaffs(email []string, eventId uuid.UUID) error
 	DeleteAll(eventId uuid.UUID) error
 	GetAllFromEvent(id *uuid.UUID) ([]*entities.Staff, error)
-	GetById(id uuid.UUID) (*entities.Staff, error)
+	GetByEmail(email string) ([]entities.Staff, error)
 }

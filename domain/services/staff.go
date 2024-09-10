@@ -10,7 +10,13 @@ type staffService struct {
 	repo repositories.StaffRepository
 }
 
-func NewStaffService(repo repositories.StaffRepository) *staffService {
+type StaffService interface {
+	SetStaffs(emails []string, eventId string) error
+	GetAllFromEventId(id string) ([]*entities.Staff, error)
+	GetByEmail(email string) ([]entities.Staff, error)
+}
+
+func NewStaffService(repo repositories.StaffRepository) StaffService {
 	return &staffService{
 		repo: repo,
 	}
@@ -38,4 +44,13 @@ func (s *staffService) GetAllFromEventId(id string) ([]*entities.Staff, error) {
 	}
 
 	return s.repo.GetAllFromEvent(&parsedId)
+}
+
+func (s *staffService) GetByEmail(email string) ([]entities.Staff, error) {
+	staffs, err := s.repo.GetByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	return staffs, nil
 }
