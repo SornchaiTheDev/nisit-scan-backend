@@ -31,8 +31,13 @@ type Participant struct {
 	EventID   uuid.UUID
 }
 
+type RefreshToken struct {
+	Token string
+	Email string
+}
+
 type Staff struct {
-	ID      uuid.UUID
 	Email   string
 	EventID uuid.UUID
+	ID      uuid.UUID
 }
