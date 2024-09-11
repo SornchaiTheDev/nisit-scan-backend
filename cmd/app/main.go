@@ -8,6 +8,7 @@ import (
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/adapters/rest"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/auth"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
 	repositories "github.com/SornchaiTheDev/nisit-scan-backend/internal/repositories/pgx"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
@@ -35,25 +36,30 @@ func main() {
 	eventRepo := repositories.NewEventRepo(q)
 	staffRepo := repositories.NewStaffRepository(q)
 	participantRepo := repositories.NewParticipantRepo(q)
+	tokenRepo := repositories.NewTokenRepository(q)
 
 	// Init Service
 	adminService := services.NewAdminService(adminRepo)
 	eventService := services.NewEventService(eventRepo)
 	staffService := services.NewStaffService(staffRepo)
 	participantService := services.NewParticipantService(participantRepo)
+	tokenService := services.NewTokenService(tokenRepo)
+
+	// Init Auth
+	authService := auth.NewGoogleOAuth(adminService, staffService)
 
 	port := os.Getenv("PORT")
 
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000",
+		AllowOrigins:     "https://localhost:3000",
 		AllowCredentials: true,
 	}))
 
 	rest.NewAdminHandler(app, adminService)
 	rest.NewEventHandler(app, eventService, staffService, participantService)
-	rest.NewGoogleAuthHandler(app, adminService, staffService)
+	rest.NewAuthHandler(app, authService, tokenService)
 
 	err = app.Listen(fmt.Sprintf(":%s", port))
 	if err != nil {

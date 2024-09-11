@@ -32,8 +32,8 @@ type Participant struct {
 }
 
 type RefreshToken struct {
-	Token string
 	Email string
+	Token string
 }
 
 type Staff struct {

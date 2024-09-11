@@ -9,18 +9,36 @@ import (
 	"context"
 )
 
-const getToken = `-- name: GetToken :one
-SELECT token, email FROM refresh_tokens WHERE token = $1 AND email = $2
+const createRefreshToken = `-- name: CreateRefreshToken :exec
+INSERT INTO refresh_tokens (token, email) VALUES ($1, $2)
 `
 
-type GetTokenParams struct {
+type CreateRefreshTokenParams struct {
 	Token string
 	Email string
 }
 
-func (q *Queries) GetToken(ctx context.Context, arg GetTokenParams) (RefreshToken, error) {
-	row := q.db.QueryRow(ctx, getToken, arg.Token, arg.Email)
+func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) error {
+	_, err := q.db.Exec(ctx, createRefreshToken, arg.Token, arg.Email)
+	return err
+}
+
+const deleteRefreshToken = `-- name: DeleteRefreshToken :exec
+DELETE FROM refresh_tokens WHERE email = $1
+`
+
+func (q *Queries) DeleteRefreshToken(ctx context.Context, email string) error {
+	_, err := q.db.Exec(ctx, deleteRefreshToken, email)
+	return err
+}
+
+const getRefreshToken = `-- name: GetRefreshToken :one
+SELECT email, token FROM refresh_tokens WHERE email = $1
+`
+
+func (q *Queries) GetRefreshToken(ctx context.Context, email string) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, getRefreshToken, email)
 	var i RefreshToken
-	err := row.Scan(&i.Token, &i.Email)
+	err := row.Scan(&i.Email, &i.Token)
 	return i, err
 }

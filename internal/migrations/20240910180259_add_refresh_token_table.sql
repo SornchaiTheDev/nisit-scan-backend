@@ -1,9 +1,8 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE refresh_tokens (
-	token VARCHAR(255),
-	email VARCHAR(255),
-	PRIMARY KEY(token, email)
+	email VARCHAR(255) PRIMARY KEY,
+	token VARCHAR(255) NOT NULL
 );
 -- +goose StatementEnd
 
