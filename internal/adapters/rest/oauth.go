@@ -36,10 +36,7 @@ func NewAuthHandler(app *fiber.App, oAuthService services.OAuthService, tokenSer
 func (h *GoogleAuthHandler) auth(c *fiber.Ctx) error {
 	url, err := h.oAuthService.Auth()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "SOMETHING_WENT_WRONG",
-			"message": "Something went wrong",
-		})
+		return c.Redirect(h.webUrl+"/auth/login?error=something-went-wrong", fiber.StatusTemporaryRedirect)
 	}
 
 	return c.Redirect(*url, fiber.StatusTemporaryRedirect)
@@ -50,10 +47,7 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 	state := c.Query("state")
 	email, token, err := h.oAuthService.Callback(code, state)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "SOMETHING_WENT_WRONG",
-			"message": "Something went wrong",
-		})
+		return c.Redirect(h.webUrl+"/auth/login?error=not-authorized", fiber.StatusTemporaryRedirect)
 	}
 
 	err = h.tokenService.RemoveToken(*email)

@@ -98,7 +98,9 @@ func (s *googleOAuthService) getUserInfo(ctx context.Context, tok *oauth2.Token)
 func (s *googleOAuthService) getRole(email string) (*string, error) {
 	admin, err := s.adminService.GetByEmail(email)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, nerrors.ErrAdminNotFound) {
+			return nil, err
+		}
 	}
 
 	var role string
