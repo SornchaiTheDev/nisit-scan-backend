@@ -10,7 +10,6 @@ import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/adapters/rest"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/auth"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
-	"github.com/SornchaiTheDev/nisit-scan-backend/internal/middleware"
 	repositories "github.com/SornchaiTheDev/nisit-scan-backend/internal/repositories/pgx"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/gofiber/fiber/v2"
@@ -58,8 +57,6 @@ func main() {
 		AllowOrigins:     "https://localhost:3000",
 		AllowCredentials: true,
 	}))
-
-	app.Use(middleware.Jwt)
 
 	rest.NewAdminHandler(app, adminService)
 	rest.NewEventHandler(app, eventService, staffService, participantService)

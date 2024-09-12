@@ -27,7 +27,7 @@ func NewEventHandler(app *fiber.App, eventService services.EventService, staffSe
 		participantService: participantService,
 	}
 
-	event := app.Group("/events", middleware.AdminMiddleware, func(c *fiber.Ctx) error {
+	event := app.Group("/events", middleware.Jwt, middleware.AdminMiddleware, func(c *fiber.Ctx) error {
 
 		claims, ok := c.Locals("token").(middleware.AccessToken)
 		if !ok {

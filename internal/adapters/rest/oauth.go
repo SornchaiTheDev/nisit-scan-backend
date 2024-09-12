@@ -2,6 +2,7 @@ package rest
 
 import (
 	"os"
+	"time"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
@@ -29,7 +30,7 @@ func NewAuthHandler(app *fiber.App, oAuthService services.OAuthService, tokenSer
 
 	auth.Get("/google", handler.auth)
 	auth.Get("/google/callback", handler.callback)
-	auth.Get("/logout", handler.logout)
+	auth.Post("/logout", handler.logout)
 	auth.Post("/refresh", handler.refreshToken)
 }
 
@@ -91,10 +92,30 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 }
 
 func (h *GoogleAuthHandler) logout(c *fiber.Ctx) error {
-	c.ClearCookie("accessToken")
-	c.ClearCookie("refreshToken")
 
-	return c.Redirect(h.webUrl, fiber.StatusTemporaryRedirect)
+	cookie := fiber.Cookie{
+		Secure:   true,
+		HTTPOnly: true,
+		SameSite: "None",
+		Path:     "/",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Second),
+	}
+
+	accessToken := cookie
+	accessToken.Name = "accessToken"
+
+	c.Cookie(&accessToken)
+
+	refreshToken := cookie
+	refreshToken.Name = "refreshToken"
+
+	c.Cookie(&refreshToken)
+
+	return c.JSON(fiber.Map{
+		"code":    "SUCCESS",
+		"message": "Logout success",
+	})
 }
 
 func (h *GoogleAuthHandler) refreshToken(c *fiber.Ctx) error {

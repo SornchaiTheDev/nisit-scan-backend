@@ -22,7 +22,7 @@ func NewAdminHandler(app *fiber.App, service services.AdminService) {
 		service: service,
 	}
 
-	admin := app.Group("/admins", middleware.AdminMiddleware)
+	admin := app.Group("/admins", middleware.Jwt, middleware.AdminMiddleware)
 
 	admin.Get("/", handler.GetAll)
 	admin.Post("/", handler.Create)
