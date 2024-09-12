@@ -8,22 +8,18 @@ import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/middleware"
 	"github.com/gofiber/fiber/v2"
 )
-
-type StaffService interface {
-	SetStaffs(email []string, eventId string) error
-	GetAllFromEventId(id string) ([]*entities.Staff, error)
-}
 
 type eventHandler struct {
 	app                *fiber.App
 	eventService       services.EventService
-	staffService       StaffService
+	staffService       services.StaffService
 	participantService services.ParticipantService
 }
 
-func NewEventHandler(app *fiber.App, eventService services.EventService, staffService StaffService, participantService services.ParticipantService) {
+func NewEventHandler(app *fiber.App, eventService services.EventService, staffService services.StaffService, participantService services.ParticipantService) {
 	handler := eventHandler{
 		app:                app,
 		eventService:       eventService,
@@ -31,7 +27,29 @@ func NewEventHandler(app *fiber.App, eventService services.EventService, staffSe
 		participantService: participantService,
 	}
 
-	event := app.Group("/events")
+	event := app.Group("/events", middleware.AdminMiddleware, func(c *fiber.Ctx) error {
+
+		claims, ok := c.Locals("token").(middleware.AccessToken)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"code":    "UNAUTHORIZED",
+				"message": "Unauthorized",
+			})
+		}
+
+		isAddParticipantPath := fiber.RoutePatternMatch(c.Path(), "/events/:id/participants")
+
+		if !isAddParticipantPath {
+			if claims.Role != "admin" {
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+					"code":    "UNAUTHORIZED",
+					"message": "Unauthorized",
+				})
+			}
+		}
+
+		return c.Next()
+	})
 	event.Get("/", handler.getAll)
 	event.Get("/:id", handler.getById)
 	event.Post("/", handler.create)
@@ -42,7 +60,36 @@ func NewEventHandler(app *fiber.App, eventService services.EventService, staffSe
 	event.Post("/:id/staffs/set", handler.setStaffs)
 
 	// Participants
-	participants := event.Group("/:id/participants")
+	participants := event.Group("/:id/participants", func(c *fiber.Ctx) error {
+		claims, ok := c.Locals("token").(middleware.AccessToken)
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"code":    "UNAUTHORIZED",
+				"message": "Unauthorized",
+			})
+		}
+		eventId := c.Params("id")
+
+		isAuthorized := true
+
+		staff, err := staffService.GetByEmailAndEventId(claims.Email, eventId)
+		if err != nil || staff == nil {
+			isAuthorized = false
+		}
+
+		if claims.Role == "admin" {
+			isAuthorized = true
+		}
+
+		if !isAuthorized {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"code":    "UNAUTHORIZED",
+				"message": "Unauthorized",
+			})
+		}
+
+		return c.Next()
+	})
 	participants.Get("/", handler.getParticipantsPagination)
 	participants.Post("/", handler.addParticipant)
 	participants.Post("/batchdelete", handler.removeParticipant)

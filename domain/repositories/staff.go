@@ -10,4 +10,5 @@ type StaffRepository interface {
 	DeleteAll(eventId uuid.UUID) error
 	GetAllFromEvent(id *uuid.UUID) ([]*entities.Staff, error)
 	GetByEmail(email string) ([]entities.Staff, error)
+	GetByEmailAndEventId(email string, eventId uuid.UUID) (*entities.Staff, error)
 }

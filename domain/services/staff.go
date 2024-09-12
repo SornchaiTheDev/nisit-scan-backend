@@ -14,6 +14,7 @@ type StaffService interface {
 	SetStaffs(emails []string, eventId string) error
 	GetAllFromEventId(id string) ([]*entities.Staff, error)
 	GetByEmail(email string) ([]entities.Staff, error)
+	GetByEmailAndEventId(email string, eventId string) (*entities.Staff, error)
 }
 
 func NewStaffService(repo repositories.StaffRepository) StaffService {
@@ -53,4 +54,18 @@ func (s *staffService) GetByEmail(email string) ([]entities.Staff, error) {
 	}
 
 	return staffs, nil
+}
+
+func (s *staffService) GetByEmailAndEventId(email string, eventId string) (*entities.Staff, error) {
+	parsedId, err := uuid.Parse(eventId)
+	if err != nil {
+		return nil, err
+	}
+
+	staff, err := s.repo.GetByEmailAndEventId(email, parsedId)
+	if err != nil {
+		return nil, err
+	}
+
+	return staff, nil
 }

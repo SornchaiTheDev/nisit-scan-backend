@@ -72,3 +72,19 @@ func (q *Queries) GetStaffsByEmail(ctx context.Context, email string) ([]Staff, 
 	}
 	return items, nil
 }
+
+const getStaffsByEmailAndEventId = `-- name: GetStaffsByEmailAndEventId :one
+SELECT email, event_id, id FROM staffs WHERE event_id = $1 AND email = $2
+`
+
+type GetStaffsByEmailAndEventIdParams struct {
+	EventID uuid.UUID
+	Email   string
+}
+
+func (q *Queries) GetStaffsByEmailAndEventId(ctx context.Context, arg GetStaffsByEmailAndEventIdParams) (Staff, error) {
+	row := q.db.QueryRow(ctx, getStaffsByEmailAndEventId, arg.EventID, arg.Email)
+	var i Staff
+	err := row.Scan(&i.Email, &i.EventID, &i.ID)
+	return i, err
+}

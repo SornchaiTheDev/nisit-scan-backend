@@ -95,3 +95,22 @@ func (s *staffRepository) GetByEmail(email string) ([]entities.Staff, error) {
 
 	return parsedStaffs, nil
 }
+
+func (s *staffRepository) GetByEmailAndEventId(email string, eventId uuid.UUID) (*entities.Staff, error) {
+	staff, err := s.q.GetStaffsByEmailAndEventId(context.Background(), sqlc.GetStaffsByEmailAndEventIdParams{
+		Email:   email,
+		EventID: eventId,
+	})
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nerrors.ErrStaffNotFound
+		}
+		return nil, err
+	}
+
+	return &entities.Staff{
+		Id:    staff.ID,
+		Email: staff.Email,
+	}, nil
+}

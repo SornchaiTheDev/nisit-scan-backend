@@ -6,8 +6,8 @@ import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/middleware"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/basicauth"
 )
 
 type adminHandler struct {
@@ -22,13 +22,7 @@ func NewAdminHandler(app *fiber.App, service services.AdminService) {
 		service: service,
 	}
 
-	admin := app.Group("/admins")
-
-	admin.Use(basicauth.New(basicauth.Config{
-		Users: map[string]string{
-			"admin": "admin",
-		},
-	}))
+	admin := app.Group("/admins", middleware.AdminMiddleware)
 
 	admin.Get("/", handler.GetAll)
 	admin.Post("/", handler.Create)

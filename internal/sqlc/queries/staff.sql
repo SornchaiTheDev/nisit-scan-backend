@@ -9,3 +9,6 @@ SELECT * FROM staffs WHERE event_id = $1;
 
 -- name: GetStaffsByEmail :many
 SELECT * FROM staffs WHERE email = $1;
+
+-- name: GetStaffsByEmailAndEventId :one
+SELECT * FROM staffs WHERE event_id = $1 AND email = $2;
