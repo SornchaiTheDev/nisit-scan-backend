@@ -107,6 +107,7 @@ func (s *googleOAuthService) getRole(email string) (*string, error) {
 
 	if admin != nil {
 		role = "admin"
+		return &role, nil
 	}
 
 	staffs, err := s.staffService.GetByEmail(email)
@@ -116,13 +117,10 @@ func (s *googleOAuthService) getRole(email string) (*string, error) {
 
 	if len(staffs) > 0 {
 		role = "staff"
+		return &role, nil
 	}
 
-	if role == "" {
-		return nil, nerrors.ErrUserNotFound
-	}
-
-	return &role, nil
+	return nil, nerrors.ErrUserNotFound
 }
 
 func (s *googleOAuthService) Callback(code string, state string) (*string, *services.AuthToken, error) {
