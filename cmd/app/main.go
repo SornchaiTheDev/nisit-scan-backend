@@ -59,7 +59,7 @@ func main() {
 	}))
 
 	rest.NewAdminHandler(app, adminService)
-	rest.NewEventHandler(app, eventService, staffService, participantService)
+	rest.NewEventHandler(app, adminService, eventService, staffService, participantService)
 	rest.NewAuthHandler(app, authService, tokenService)
 
 	err = app.Listen(fmt.Sprintf(":%s", port))

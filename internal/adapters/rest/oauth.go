@@ -6,6 +6,7 @@ import (
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/session"
 	"golang.org/x/oauth2"
 )
 
@@ -15,15 +16,23 @@ type GoogleAuthHandler struct {
 	webUrl       string
 	oAuthService services.OAuthService
 	tokenService services.TokenService
+	store        *session.Store
+	signInUrl    string
+	signInError  string
 }
 
 func NewAuthHandler(app *fiber.App, oAuthService services.OAuthService, tokenService services.TokenService) {
+
+	store := session.New()
 
 	handler := &GoogleAuthHandler{
 		states:       make(map[string]bool),
 		webUrl:       os.Getenv("WEB_URL"),
 		oAuthService: oAuthService,
 		tokenService: tokenService,
+		store:        store,
+		signInUrl:    os.Getenv("WEB_URL") + "/auth/sign-in",
+		signInError:  os.Getenv("WEB_URL") + "/auth/sign-in?error=something-went-wrong",
 	}
 
 	auth := app.Group("/auth")
@@ -37,7 +46,20 @@ func NewAuthHandler(app *fiber.App, oAuthService services.OAuthService, tokenSer
 func (h *GoogleAuthHandler) auth(c *fiber.Ctx) error {
 	url, err := h.oAuthService.Auth()
 	if err != nil {
-		return c.Redirect(h.webUrl+"/auth/login?error=something-went-wrong", fiber.StatusTemporaryRedirect)
+		return c.Redirect(h.signInError, fiber.StatusTemporaryRedirect)
+	}
+
+	sess, err := h.store.Get(c)
+	if err != nil {
+		return c.Redirect(h.signInError, fiber.StatusTemporaryRedirect)
+	}
+
+	redirectTo := c.Query("redirect_to")
+	if redirectTo != "" {
+		sess.Set("redirect_to", redirectTo)
+		if err := sess.Save(); err != nil {
+			return c.Redirect(h.signInError, fiber.StatusTemporaryRedirect)
+		}
 	}
 
 	return c.Redirect(*url, fiber.StatusTemporaryRedirect)
@@ -48,7 +70,7 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 	state := c.Query("state")
 	email, token, err := h.oAuthService.Callback(code, state)
 	if err != nil {
-		return c.Redirect(h.webUrl+"/auth/login?error=not-authorized", fiber.StatusTemporaryRedirect)
+		return c.Redirect(h.signInUrl+"?error=not-authorized", fiber.StatusTemporaryRedirect)
 	}
 
 	err = h.tokenService.RemoveToken(*email)
@@ -88,7 +110,20 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 
 	c.Cookie(&refreshToken)
 
-	return c.Redirect(h.webUrl + "/manage/events")
+	sess, err := h.store.Get(c)
+	if err != nil {
+		return c.Redirect(h.signInError, fiber.StatusTemporaryRedirect)
+	}
+
+	redirectTo := sess.Get("redirect_to")
+
+	if redirectTo == nil {
+		return c.Redirect(h.webUrl, fiber.StatusTemporaryRedirect)
+	} else {
+		sess.Delete("redirect_to")
+	}
+
+	return c.Redirect(h.webUrl+redirectTo.(string), fiber.StatusTemporaryRedirect)
 }
 
 func (h *GoogleAuthHandler) logout(c *fiber.Ctx) error {
