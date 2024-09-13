@@ -1,9 +1,11 @@
 package rest
 
 import (
+	"errors"
 	"os"
 	"time"
 
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
@@ -166,6 +168,12 @@ func (h *GoogleAuthHandler) refreshToken(c *fiber.Ctx) error {
 
 	authTokens, err := h.tokenService.RefreshToken(accessToken, refreshToken)
 	if err != nil {
+		if errors.Is(err, nerrors.ErrTokenStillValid) {
+			return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"code":    "TOKEN_STILL_VALID",
+				"message": "Token still valid",
+			})
+		}
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"code":    "UNAUTHORIZE",
 			"message": "You are not authorized",

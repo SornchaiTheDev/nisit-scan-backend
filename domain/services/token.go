@@ -1,6 +1,8 @@
 package services
 
 import (
+	"time"
+
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
@@ -46,6 +48,12 @@ func (s *tokenService) RefreshToken(accessToken string, refreshToken string) (*A
 	accessClaims, err := libs.ParseJwt(accessToken)
 	if err != nil {
 		return nil, err
+	}
+
+	exp := time.Unix(int64(accessClaims["exp"].(float64)), 0)
+
+	if exp.Sub(time.Now()) > 5 {
+		return nil, nerrors.ErrTokenStillValid
 	}
 
 	record, err := s.GetToken(refreshClaims["email"].(string))
