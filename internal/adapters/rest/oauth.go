@@ -144,7 +144,13 @@ func (h *GoogleAuthHandler) logout(c *fiber.Ctx) error {
 
 	c.Cookie(&accessToken)
 
+	sessionId := cookie
+	sessionId.Name = "session_id"
+
+	c.Cookie(&sessionId)
+
 	refreshToken := cookie
+
 	refreshToken.Name = "refreshToken"
 
 	c.Cookie(&refreshToken)
