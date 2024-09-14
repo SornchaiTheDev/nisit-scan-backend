@@ -52,7 +52,7 @@ func (s *tokenService) RefreshToken(accessToken string, refreshToken string) (*A
 
 	exp := time.Unix(int64(accessClaims["exp"].(float64)), 0)
 
-	if exp.Sub(time.Now()) > 5 {
+	if exp.Sub(time.Now()).Minutes() > 5 {
 		return nil, nerrors.ErrTokenStillValid
 	}
 
