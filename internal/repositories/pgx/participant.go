@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
-	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -25,15 +25,15 @@ func NewParticipantRepo(q *sqlc.Queries) repositories.ParticipantRepository {
 	}
 }
 
-func (p *participantRepo) AddParticipant(eventId uuid.UUID, r *requests.AddParticipant) (*entities.Participant, error) {
+func (p *participantRepo) AddParticipant(eventId uuid.UUID, barcode string, timestamp time.Time) (*entities.Participant, error) {
 	t := pgtype.Timestamp{}
-	err := t.Scan(r.Timestamp)
+	err := t.Scan(timestamp)
 	if err != nil {
 		return nil, err
 	}
 
 	c, err := p.q.CreateParticipantRecord(context.Background(), sqlc.CreateParticipantRecordParams{
-		Barcode:   r.Barcode,
+		Barcode:   barcode,
 		Timestamp: t,
 		EventID:   eventId,
 	})

@@ -2,6 +2,7 @@ package services
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
@@ -33,7 +34,12 @@ func (p *participantService) AddParticipant(eventId string, r *requests.AddParti
 		return nil, err
 	}
 
-	return p.repo.AddParticipant(parsedId, r)
+	parsedTimestamp, err := time.Parse(time.RFC3339, r.Timestamp)
+	if err != nil {
+		return nil, err
+	}
+
+	return p.repo.AddParticipant(parsedId, r.Barcode, parsedTimestamp)
 }
 
 func (p *participantService) GetParticipants(eventId string, search string, pageIndex string, pageSize string) ([]entities.Participant, error) {

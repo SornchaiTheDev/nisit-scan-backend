@@ -130,5 +130,14 @@ func (e *eventRepoImpl) UpdateById(id uuid.UUID, event *entities.Event) error {
 		Host:  event.Host,
 	})
 
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return nerrors.ErrEventAlreadyExists
+			}
+		}
+	}
+
 	return err
 }

@@ -1,8 +1,6 @@
 package requests
 
-import "time"
-
 type AddParticipant struct {
-	Barcode   string    `json:"barcode"`
-	Timestamp time.Time `json:"timestamp"`
+	Barcode   string    `json:"barcode" validate:"required"`
+	Timestamp string `json:"timestamp" validate:"required,timestamp"`
 }

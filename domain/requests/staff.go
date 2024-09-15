@@ -1,5 +1,5 @@
 package requests
 
-type CreateStaffRequest struct {
-	Email []string `json:"emails"`
+type SetStaffRequest struct {
+	Email []string `json:"emails" validate:"required"`
 }

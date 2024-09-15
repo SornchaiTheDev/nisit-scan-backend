@@ -3,7 +3,9 @@ package libs
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -31,9 +33,25 @@ func NewValidator() *validatorImpl {
 		return name
 	})
 
+	validate.RegisterValidation("date", dateValidator)
+	validate.RegisterValidation("timestamp", timestampValidator)
+
 	return &validatorImpl{
 		validate: validate,
 	}
+}
+
+func dateValidator(fl validator.FieldLevel) bool {
+	match, err := regexp.MatchString(`^(?:\d{2})/(?:\d{2})/(?:\d{4})$`, fl.Field().String())
+	if err != nil {
+		return false
+	}
+	return match
+}
+
+func timestampValidator(fl validator.FieldLevel) bool {
+	_, err := time.Parse(time.RFC3339, fl.Field().String())
+	return err == nil
 }
 
 func (v *validatorImpl) Validate(data interface{}) *ValidateError {

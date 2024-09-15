@@ -8,6 +8,7 @@ import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/responses"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/middleware"
 	"github.com/gofiber/fiber/v2"
 )
@@ -74,12 +75,17 @@ func NewEventHandler(app *fiber.App, adminService services.AdminService, eventSe
 }
 
 func (h *eventHandler) create(c *fiber.Ctx) error {
-	var request requests.EventRequest
-	err := c.BodyParser(&request)
+	var r requests.EventRequest
+	err := c.BodyParser(&r)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Cannot parse request body",
 		})
+	}
+
+	errs := libs.Validator.Validate(r)
+	if errs != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errs)
 	}
 
 	email := c.Locals("token").(middleware.AccessToken).Email
@@ -99,7 +105,7 @@ func (h *eventHandler) create(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.eventService.Create(&request, admin.Id.String())
+	err = h.eventService.Create(&r, admin.Id.String())
 	if err != nil {
 		switch {
 		case errors.Is(err, nerrors.ErrEventAlreadyExists):
@@ -220,7 +226,23 @@ func (h *eventHandler) getById(c *fiber.Ctx) error {
 
 func (h *eventHandler) deleteById(c *fiber.Ctx) error {
 	id := c.Params("id")
-	err := h.eventService.DeleteById(id)
+
+	_, err := h.eventService.GetById(id)
+	if err != nil {
+		if errors.Is(err, nerrors.ErrEventNotFound) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_NOT_FOUND",
+				"message": "Event not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
+	err = h.eventService.DeleteById(id)
 	if err != nil {
 		if errors.Is(err, nerrors.ErrEventNotFound) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -236,20 +258,25 @@ func (h *eventHandler) deleteById(c *fiber.Ctx) error {
 	}
 	return c.JSON(fiber.Map{
 		"code":    "SUCCESS",
-		"message": "Delte Event Success",
+		"message": "Delete Event Success",
 	})
 }
 
 func (h *eventHandler) updateById(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	var payload *requests.EventRequest
-	err := c.BodyParser(&payload)
+	var r *requests.EventRequest
+	err := c.BodyParser(&r)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
 			"message": err,
 		})
+	}
+
+	errs := libs.Validator.Validate(r)
+	if errs != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errs)
 	}
 
 	_, err = h.eventService.GetById(id)
@@ -262,12 +289,20 @@ func (h *eventHandler) updateById(c *fiber.Ctx) error {
 		}
 	}
 
-	err = h.eventService.UpdateById(id, payload)
+	err = h.eventService.UpdateById(id, r)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"code":    "SOMETHING_WENT_WRONG",
-			"message": "Something went wrong",
-		})
+		switch {
+		case errors.Is(err, nerrors.ErrEventAlreadyExists):
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_ALREADY_EXISTS",
+				"message": "This event is already exists",
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "SOMETHING_WENT_WRONG",
+				"message": "Something went wrong",
+			})
+		}
 	}
 
 	return c.JSON(fiber.Map{
@@ -278,8 +313,8 @@ func (h *eventHandler) updateById(c *fiber.Ctx) error {
 
 func (h *eventHandler) setStaffs(c *fiber.Ctx) error {
 	eventId := c.Params("id")
-	var request requests.CreateStaffRequest
-	err := c.BodyParser(&request)
+	var r requests.SetStaffRequest
+	err := c.BodyParser(&r)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "INVALID_REQUEST",
@@ -287,7 +322,12 @@ func (h *eventHandler) setStaffs(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.staffService.SetStaffs(request.Email, eventId)
+	errs := libs.Validator.Validate(r)
+	if errs != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errs)
+	}
+
+	err = h.staffService.SetStaffs(r.Email, eventId)
 	if err != nil {
 		switch {
 		case errors.Is(err, nerrors.ErrEventNotFound):
@@ -322,6 +362,21 @@ func (h *eventHandler) getParticipantsPagination(c *fiber.Ctx) error {
 	search := c.Query("search")
 	eventId := c.Params("id")
 
+	_, err := h.eventService.GetById(eventId)
+	if err != nil {
+		if errors.Is(err, nerrors.ErrEventNotFound) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_NOT_FOUND",
+				"message": "Event not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
 	participants, err := h.participantService.GetParticipants(eventId, search, pageIndex, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -347,8 +402,23 @@ func (h *eventHandler) getParticipantsPagination(c *fiber.Ctx) error {
 func (h *eventHandler) addParticipant(c *fiber.Ctx) error {
 	eventId := c.Params("id")
 
-	var request requests.AddParticipant
-	err := c.BodyParser(&request)
+	_, err := h.eventService.GetById(eventId)
+	if err != nil {
+		if errors.Is(err, nerrors.ErrEventNotFound) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_NOT_FOUND",
+				"message": "Event not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
+	var r requests.AddParticipant
+	err = c.BodyParser(&r)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "INVALID_REQUEST",
@@ -356,7 +426,12 @@ func (h *eventHandler) addParticipant(c *fiber.Ctx) error {
 		})
 	}
 
-	r, err := h.participantService.AddParticipant(eventId, &request)
+	errs := libs.Validator.Validate(r)
+	if errs != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errs)
+	}
+
+	participant, err := h.participantService.AddParticipant(eventId, &r)
 	if err != nil {
 		if errors.Is(err, nerrors.ErrParticipantAlreadyExists) {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -373,25 +448,45 @@ func (h *eventHandler) addParticipant(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"code":        "SUCCESS",
-		"participant": r,
+		"participant": participant,
 	})
 }
 
 func (h *eventHandler) removeParticipant(c *fiber.Ctx) error {
 	eventId := c.Params("id")
 
-	var request struct {
-		Barcodes []string `json:"barcodes"`
-	}
+	_, err := h.eventService.GetById(eventId)
+	if err != nil {
+		if errors.Is(err, nerrors.ErrEventNotFound) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_NOT_FOUND",
+				"message": "Event not found",
+			})
+		}
 
-	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
 			"message": "Something went wrong",
 		})
 	}
 
-	err := h.participantService.RemoveParticipants(eventId, request.Barcodes)
+	var r struct {
+		Barcodes []string `json:"barcodes" validate:"required"`
+	}
+
+	if err := c.BodyParser(&r); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
+	errs := libs.Validator.Validate(r)
+	if errs != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errs)
+	}
+
+	err = h.participantService.RemoveParticipants(eventId, r.Barcodes)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
