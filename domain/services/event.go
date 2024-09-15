@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
@@ -13,7 +14,8 @@ import (
 )
 
 type EventService interface {
-	GetAll() ([]*entities.Event, error)
+	GetPagination(search string, pageIndex string, pageSize string) ([]*entities.Event, error)
+	GetEventsCount(search string) (int64, error)
 	GetById(id string) (*entities.Event, error)
 	Create(e *requests.EventRequest, adminId string) error
 	DeleteById(id string) error
@@ -57,8 +59,23 @@ func (s *eventService) isEventExist(id *uuid.UUID) error {
 	return nil
 }
 
-func (s *eventService) GetAll() ([]*entities.Event, error) {
-	return s.repo.GetAll()
+func (s *eventService) GetPagination(search string, pageIndex string, pageSize string) ([]*entities.Event, error) {
+
+	parsedIndex, err := strconv.ParseInt(pageIndex, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+
+	parsedSize, err := strconv.ParseInt(pageSize, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.repo.GetPagination(search, int32(parsedIndex), int32(parsedSize))
+}
+
+func (s *eventService) GetEventsCount(search string) (int64, error) {
+	return s.repo.GetCount(search)
 }
 
 func (s *eventService) GetById(id string) (*entities.Event, error) {

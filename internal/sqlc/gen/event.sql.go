@@ -47,7 +47,16 @@ func (q *Queries) DeleteEventById(ctx context.Context, id uuid.UUID) error {
 const getAllEvents = `-- name: GetAllEvents :many
 SELECT events.id, name, place, date, host, admin_id, admins.id, email, full_name, deleted_at FROM events
 INNER JOIN admins ON events.admin_id = admins.id
+WHERE events.name LIKE $1 OR events.place LIKE $1 OR events.host LIKE $1
+ORDER BY events.date DESC
+LIMIT $2 OFFSET $3
 `
+
+type GetAllEventsParams struct {
+	Name   string
+	Limit  int32
+	Offset int32
+}
 
 type GetAllEventsRow struct {
 	ID        uuid.UUID
@@ -62,8 +71,8 @@ type GetAllEventsRow struct {
 	DeletedAt pgtype.Timestamp
 }
 
-func (q *Queries) GetAllEvents(ctx context.Context) ([]GetAllEventsRow, error) {
-	rows, err := q.db.Query(ctx, getAllEvents)
+func (q *Queries) GetAllEvents(ctx context.Context, arg GetAllEventsParams) ([]GetAllEventsRow, error) {
+	rows, err := q.db.Query(ctx, getAllEvents, arg.Name, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +137,18 @@ func (q *Queries) GetEventById(ctx context.Context, id uuid.UUID) (GetEventByIdR
 		&i.DeletedAt,
 	)
 	return i, err
+}
+
+const getEventCount = `-- name: GetEventCount :one
+SELECT COUNT(*) FROM events
+WHERE events.name LIKE $1 OR events.place LIKE $1 OR events.host LIKE $1
+`
+
+func (q *Queries) GetEventCount(ctx context.Context, name string) (int64, error) {
+	row := q.db.QueryRow(ctx, getEventCount, name)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const updateEventById = `-- name: UpdateEventById :exec

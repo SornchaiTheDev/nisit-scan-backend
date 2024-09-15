@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
@@ -24,8 +25,12 @@ func NewEventRepo(q *sqlc.Queries) repositories.EventRepository {
 	}
 }
 
-func (e *eventRepoImpl) GetAll() ([]*entities.Event, error) {
-	events, err := e.q.GetAllEvents(context.Background())
+func (e *eventRepoImpl) GetPagination(search string, pageIndex int32, pageSize int32) ([]*entities.Event, error) {
+	events, err := e.q.GetAllEvents(context.Background(), sqlc.GetAllEventsParams{
+		Name:   fmt.Sprintf("%%%s%%", search),
+		Offset: pageIndex,
+		Limit:  pageSize,
+	})
 
 	var parsedEvents []*entities.Event
 
@@ -43,6 +48,15 @@ func (e *eventRepoImpl) GetAll() ([]*entities.Event, error) {
 	}
 
 	return parsedEvents, err
+}
+
+func (e *eventRepoImpl) GetCount(search string) (int64, error) {
+	count, err := e.q.GetEventCount(context.Background(), fmt.Sprintf("%%%s%%", search))
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 func (e *eventRepoImpl) GetById(id uuid.UUID) (*entities.Event, error) {

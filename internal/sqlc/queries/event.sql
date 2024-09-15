@@ -1,6 +1,13 @@
 -- name: GetAllEvents :many
 SELECT * FROM events
-INNER JOIN admins ON events.admin_id = admins.id;
+INNER JOIN admins ON events.admin_id = admins.id
+WHERE events.name LIKE $1 OR events.place LIKE $1 OR events.host LIKE $1
+ORDER BY events.date DESC
+LIMIT $2 OFFSET $3;
+
+-- name: GetEventCount :one
+SELECT COUNT(*) FROM events
+WHERE events.name LIKE $1 OR events.place LIKE $1 OR events.host LIKE $1;
 
 -- name: GetEventById :one
 SELECT * FROM events

@@ -2,11 +2,11 @@ package rest
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/responses"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/middleware"
 	"github.com/gofiber/fiber/v2"
@@ -56,7 +56,7 @@ func NewEventHandler(app *fiber.App, adminService services.AdminService, eventSe
 
 	staffMiddeleware := middleware.NewStaffMiddleware(staffService)
 
-	event.Get("/", handler.getAll)
+	event.Get("/", handler.getPagination)
 	event.Get("/:id", staffMiddeleware.Staff, handler.getById)
 	event.Post("/", handler.create)
 	event.Put("/:id", handler.updateById)
@@ -128,20 +128,52 @@ func (h *eventHandler) create(c *fiber.Ctx) error {
 
 }
 
-func (h *eventHandler) getAll(c *fiber.Ctx) error {
-	events, err := h.eventService.GetAll()
+func (h *eventHandler) getPagination(c *fiber.Ctx) error {
+	search := c.Query("search")
+	pageIndex := c.Query("pageIndex")
+	pageSize := c.Query("pageSize")
+
+	events, err := h.eventService.GetPagination(search, pageIndex, pageSize)
 	if err != nil {
-		fmt.Println(err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
 			"message": "Some thing went wrong",
 		})
 	}
 
-	if events == nil {
-		events = []*entities.Event{}
+	var responseEvents []*responses.EventResponse
+
+	for _, event := range events {
+		count, err := h.participantService.GetCountParticipants(event.Id.String(), "")
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "SOMETHING_WENT_WRONG",
+				"message": "Some thing went wrong",
+			})
+		}
+		responseEvents = append(responseEvents, &responses.EventResponse{
+			ID:                event.Id,
+			Name:              event.Name,
+			Place:             event.Place,
+			Date:              event.Date,
+			Host:              event.Host,
+			Owner:             event.Owner,
+			ParticipantsCount: *count,
+		})
 	}
 
-	return c.JSON(events)
+	count, err := h.eventService.GetEventsCount(search)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Some thing went wrong",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"events":    responseEvents,
+		"totalRows": count,
+	})
 }
 
 func (h *eventHandler) getById(c *fiber.Ctx) error {
