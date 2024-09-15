@@ -72,7 +72,7 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 	state := c.Query("state")
 	email, token, err := h.oAuthService.Callback(code, state)
 	if err != nil {
-		return c.Redirect(h.signInUrl+"?error=not-authorized", fiber.StatusTemporaryRedirect)
+		return c.Redirect(h.signInUrl+"?error=unauthorized", fiber.StatusTemporaryRedirect)
 	}
 
 	err = h.tokenService.RemoveToken(*email)
