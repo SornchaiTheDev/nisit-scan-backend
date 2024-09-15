@@ -6,6 +6,7 @@ import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/middleware"
 	"github.com/gofiber/fiber/v2"
 )
@@ -39,6 +40,11 @@ func (h *adminHandler) Create(c *fiber.Ctx) error {
 		})
 	}
 
+	errs := libs.Validator.Validate(r)
+	if errs != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errs)
+	}
+
 	if err := h.service.Create(&r); err != nil {
 		switch {
 		case errors.Is(err, nerrors.ErrAdminAlreadyExists):
@@ -63,17 +69,22 @@ func (h *adminHandler) Create(c *fiber.Ctx) error {
 func (h *adminHandler) UpdateById(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	var request requests.AdminRequest
-	if err := c.BodyParser(&request); err != nil {
+	var r requests.AdminRequest
+	if err := c.BodyParser(&r); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"ccde":    "INVALID_REQUEST",
 			"message": "Cannot read request body",
 		})
 	}
 
+	errs := libs.Validator.Validate(r)
+	if errs != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errs)
+	}
+
 	payload := &requests.AdminRequest{
-		FullName: request.FullName,
-		Email:    request.Email,
+		FullName: r.FullName,
+		Email:    r.Email,
 	}
 
 	err := h.service.UpdateById(id, payload)
@@ -105,10 +116,20 @@ func (h *adminHandler) UpdateById(c *fiber.Ctx) error {
 
 func (h *adminHandler) DeleteByIds(c *fiber.Ctx) error {
 	var ids struct {
-		Id []string `json:"ids"`
+		Id []string `json:"ids" validate:"required"`
 	}
 
-	c.BodyParser(&ids)
+	if err := c.BodyParser(&ids); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"ccde":    "INVALID_REQUEST",
+			"message": "Cannot read request body",
+		})
+	}
+
+	errs := libs.Validator.Validate(ids)
+	if errs != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errs)
+	}
 
 	err := h.service.DeleteByIds(ids.Id)
 	if err != nil {
