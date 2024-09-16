@@ -21,12 +21,19 @@ func main() {
 	libs.InitEnv()
 
 	dbUrl := os.Getenv("DATABASE_URL")
+	log.Println("Database URL: ", dbUrl)
 	conn, err := pgxpool.New(context.Background(), dbUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	defer conn.Close()
+
+	if err := conn.Ping(context.Background()); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("Database connected")
 
 	// Init sqlc
 	q := sqlc.New(conn)
@@ -54,7 +61,7 @@ func main() {
 
 	// Middlewares
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "https://localhost:3000",
+		AllowOrigins:     os.Getenv("WEB_URL"),
 		AllowCredentials: true,
 	}))
 
