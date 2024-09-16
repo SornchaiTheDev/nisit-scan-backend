@@ -8,9 +8,6 @@ LIMIT $3 OFFSET $4;
 SELECT COUNT(*) FROM admins
 WHERE (email LIKE $1 OR full_name LIKE $2) AND deleted_at IS NULL;
 
--- name: GetActiveAdmins :many
-SELECT * FROM admins WHERE deleted_at IS NULL;
-
 -- name: GetAdminById :one
 SELECT * FROM admins
 WHERE id = $1 AND deleted_at IS NULL;

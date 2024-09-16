@@ -42,35 +42,6 @@ func (q *Queries) CreateAdmin(ctx context.Context, arg CreateAdminParams) error 
 	return err
 }
 
-const getActiveAdmins = `-- name: GetActiveAdmins :many
-SELECT id, email, full_name, deleted_at FROM admins WHERE deleted_at IS NULL
-`
-
-func (q *Queries) GetActiveAdmins(ctx context.Context) ([]Admin, error) {
-	rows, err := q.db.Query(ctx, getActiveAdmins)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Admin
-	for rows.Next() {
-		var i Admin
-		if err := rows.Scan(
-			&i.ID,
-			&i.Email,
-			&i.FullName,
-			&i.DeletedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getAdminByEmail = `-- name: GetAdminByEmail :one
 SELECT id, email, full_name, deleted_at FROM admins
 WHERE email = $1 AND deleted_at IS NULL
