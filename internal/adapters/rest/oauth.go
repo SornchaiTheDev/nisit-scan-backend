@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/SornchaiTheDev/nisit-scan-backend/configs"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
@@ -91,11 +92,12 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 		})
 	}
 
-	cookie := fiber.Cookie{
-		Secure:   true,
-		HTTPOnly: true,
-		SameSite: "None",
-		Path:     "/",
+	cookie, err := configs.NewCookie()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
 	}
 
 	accessToken := cookie
@@ -103,14 +105,14 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 	accessToken.Value = token.AccessToken
 	accessToken.Expires = token.AccessTokenExpired
 
-	c.Cookie(&accessToken)
+	c.Cookie(accessToken)
 
 	refreshToken := cookie
 	refreshToken.Name = "refreshToken"
 	refreshToken.Value = token.RefreshToken
 	refreshToken.Expires = token.RefreshTokenExpired
 
-	c.Cookie(&refreshToken)
+	c.Cookie(refreshToken)
 
 	sess, err := h.store.Get(c)
 	if err != nil {
@@ -130,30 +132,32 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 
 func (h *GoogleAuthHandler) logout(c *fiber.Ctx) error {
 
-	cookie := fiber.Cookie{
-		Secure:   true,
-		HTTPOnly: true,
-		SameSite: "None",
-		Path:     "/",
-		Value:    "",
-		Expires:  time.Now().Add(-time.Second),
+	cookie, err := configs.NewCookie()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
 	}
+
+	cookie.Value = ""
+	cookie.Expires = time.Now().Add(-time.Second)
 
 	accessToken := cookie
 	accessToken.Name = "accessToken"
 
-	c.Cookie(&accessToken)
+	c.Cookie(accessToken)
 
 	sessionId := cookie
 	sessionId.Name = "session_id"
 
-	c.Cookie(&sessionId)
+	c.Cookie(sessionId)
 
 	refreshToken := cookie
 
 	refreshToken.Name = "refreshToken"
 
-	c.Cookie(&refreshToken)
+	c.Cookie(refreshToken)
 
 	return c.JSON(fiber.Map{
 		"code":    "SUCCESS",
@@ -186,11 +190,12 @@ func (h *GoogleAuthHandler) refreshToken(c *fiber.Ctx) error {
 		})
 	}
 
-	cookie := fiber.Cookie{
-		Secure:   true,
-		HTTPOnly: true,
-		SameSite: "None",
-		Path:     "/",
+	cookie, err := configs.NewCookie()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
 	}
 
 	accessTokenC := cookie
@@ -198,14 +203,14 @@ func (h *GoogleAuthHandler) refreshToken(c *fiber.Ctx) error {
 	accessTokenC.Value = authTokens.AccessToken
 	accessTokenC.Expires = authTokens.AccessTokenExpired
 
-	c.Cookie(&accessTokenC)
+	c.Cookie(accessTokenC)
 
 	refreshTokenC := cookie
 	refreshTokenC.Name = "refreshToken"
 	refreshTokenC.Value = authTokens.RefreshToken
 	refreshTokenC.Expires = authTokens.RefreshTokenExpired
 
-	c.Cookie(&refreshTokenC)
+	c.Cookie(refreshTokenC)
 
 	return c.JSON(fiber.Map{
 		"code":    "SUCCESS",
