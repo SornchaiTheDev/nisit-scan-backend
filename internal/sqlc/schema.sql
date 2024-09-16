@@ -19,10 +19,10 @@ CREATE TABLE events (
 );
 
 CREATE TABLE staffs (
-	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 	email VARCHAR(255) NOT NULL,
 	event_id UUID,
 
+	UNIQUE (email, event_id),
 	FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 

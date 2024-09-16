@@ -108,6 +108,7 @@ func (q *Queries) GetAdminById(ctx context.Context, id uuid.UUID) (Admin, error)
 const getAllAdmins = `-- name: GetAllAdmins :many
 SELECT id, email, full_name, deleted_at FROM admins
 WHERE (email LIKE $1 OR full_name LIKE $2) AND deleted_at IS NULL
+ORDER BY email
 LIMIT $3 OFFSET $4
 `
 

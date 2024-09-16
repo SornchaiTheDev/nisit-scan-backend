@@ -1,6 +1,7 @@
 -- name: GetAllAdmins :many
 SELECT * FROM admins
 WHERE (email LIKE $1 OR full_name LIKE $2) AND deleted_at IS NULL
+ORDER BY email
 LIMIT $3 OFFSET $4;
 
 -- name: CountAllAdmins :one

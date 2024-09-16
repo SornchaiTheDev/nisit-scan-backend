@@ -38,7 +38,6 @@ type RefreshToken struct {
 }
 
 type Staff struct {
-	ID      uuid.UUID
 	Email   string
 	EventID uuid.UUID
 }

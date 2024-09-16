@@ -66,7 +66,6 @@ func (s *staffRepository) GetAllFromEvent(id *uuid.UUID) ([]*entities.Staff, err
 	var result []*entities.Staff
 	for _, staff := range staffs {
 		result = append(result, &entities.Staff{
-			Id:    staff.ID,
 			Email: staff.Email,
 		})
 	}
@@ -87,7 +86,6 @@ func (s *staffRepository) GetByEmail(email string) ([]entities.Staff, error) {
 
 	for _, staff := range staffs {
 		parsedStaff := &entities.Staff{
-			Id:    staff.ID,
 			Email: staff.Email,
 		}
 		parsedStaffs = append(parsedStaffs, *parsedStaff)
@@ -110,7 +108,6 @@ func (s *staffRepository) GetByEmailAndEventId(email string, eventId uuid.UUID) 
 	}
 
 	return &entities.Staff{
-		Id:    staff.ID,
 		Email: staff.Email,
 	}, nil
 }
