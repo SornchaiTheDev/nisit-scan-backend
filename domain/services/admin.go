@@ -96,6 +96,17 @@ func (s *adminService) UpdateById(id string, value *requests.AdminRequest) error
 		return nerrors.ErrCannotParseUUID
 	}
 
+	record, err := s.GetByEmail(value.Email)
+	if err != nil {
+		if !errors.Is(err, nerrors.ErrAdminNotFound) {
+			return err
+		}
+	}
+
+	if record != nil {
+		return nerrors.ErrAdminAlreadyExists
+	}
+
 	return s.repo.UpdateById(parsedId, value)
 }
 

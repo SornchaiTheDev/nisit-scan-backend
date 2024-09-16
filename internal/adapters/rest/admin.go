@@ -100,6 +100,11 @@ func (h *adminHandler) UpdateById(c *fiber.Ctx) error {
 				"ccde":    "USER_NOT_FOUND",
 				"message": "User not found",
 			})
+		case errors.Is(err, nerrors.ErrAdminAlreadyExists):
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "ADMIN_ALREADY_EXISTS",
+				"message": "This email is already exists",
+			})
 		default:
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "SOMETHING_WENT_WRONG",
