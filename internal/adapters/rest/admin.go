@@ -2,6 +2,7 @@ package rest
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
@@ -131,12 +132,37 @@ func (h *adminHandler) DeleteByIds(c *fiber.Ctx) error {
 		})
 	}
 
+	claims, ok := c.Locals("token").(middleware.AccessToken)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"code":    "UNAUTHORIZED",
+			"message": "Unauthorized",
+		})
+	}
+
+	record, err := h.service.GetByEmail(claims.Email)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
+	isInAny := slices.Contains(ids.Id, record.Id.String())
+
+	if isInAny {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"code":    "CANNOT_DELETE_SELF",
+			"message": "Cannot delete yourself",
+		})
+	}
+
 	errs := libs.Validator.Validate(ids)
 	if errs != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(errs)
 	}
 
-	err := h.service.DeleteByIds(ids.Id)
+	err = h.service.DeleteByIds(ids.Id)
 	if err != nil {
 		switch {
 		case errors.Is(err, nerrors.ErrAdminNotFound):
