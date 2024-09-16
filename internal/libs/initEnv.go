@@ -9,12 +9,12 @@ import (
 )
 
 func InitEnv() {
-	isDocker, err := strconv.ParseBool(os.Getenv("IS_PROD"))
+	isProd, err := strconv.ParseBool(os.Getenv("IS_PROD"))
 	if err != nil {
-		isDocker = false
+		isProd = false
 	}
 
-	if isDocker {
+	if isProd {
 		return
 	}
 
