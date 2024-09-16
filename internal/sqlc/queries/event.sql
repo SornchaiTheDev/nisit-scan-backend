@@ -2,7 +2,7 @@
 SELECT * FROM events
 INNER JOIN admins ON events.admin_id = admins.id
 WHERE events.name LIKE $1 OR events.place LIKE $1 OR events.host LIKE $1
-ORDER BY events.date DESC
+ORDER BY (events.date,events.created_at) DESC
 LIMIT $2 OFFSET $3;
 
 -- name: GetEventCount :one

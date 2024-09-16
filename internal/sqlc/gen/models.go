@@ -17,12 +17,13 @@ type Admin struct {
 }
 
 type Event struct {
-	ID      uuid.UUID
-	Name    string
-	Place   string
-	Date    pgtype.Date
-	Host    string
-	AdminID uuid.UUID
+	ID        uuid.UUID
+	Name      string
+	Place     string
+	Date      pgtype.Date
+	Host      string
+	AdminID   uuid.UUID
+	CreatedAt pgtype.Timestamp
 }
 
 type Participant struct {
@@ -37,7 +38,7 @@ type RefreshToken struct {
 }
 
 type Staff struct {
+	ID      uuid.UUID
 	Email   string
 	EventID uuid.UUID
-	ID      uuid.UUID
 }

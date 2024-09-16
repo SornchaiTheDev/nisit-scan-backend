@@ -45,10 +45,10 @@ func (q *Queries) DeleteEventById(ctx context.Context, id uuid.UUID) error {
 }
 
 const getAllEvents = `-- name: GetAllEvents :many
-SELECT events.id, name, place, date, host, admin_id, admins.id, email, full_name, deleted_at FROM events
+SELECT events.id, name, place, date, host, admin_id, created_at, admins.id, email, full_name, deleted_at FROM events
 INNER JOIN admins ON events.admin_id = admins.id
 WHERE events.name LIKE $1 OR events.place LIKE $1 OR events.host LIKE $1
-ORDER BY events.date DESC
+ORDER BY (events.date,events.created_at) DESC
 LIMIT $2 OFFSET $3
 `
 
@@ -65,6 +65,7 @@ type GetAllEventsRow struct {
 	Date      pgtype.Date
 	Host      string
 	AdminID   uuid.UUID
+	CreatedAt pgtype.Timestamp
 	ID_2      uuid.UUID
 	Email     string
 	FullName  string
@@ -87,6 +88,7 @@ func (q *Queries) GetAllEvents(ctx context.Context, arg GetAllEventsParams) ([]G
 			&i.Date,
 			&i.Host,
 			&i.AdminID,
+			&i.CreatedAt,
 			&i.ID_2,
 			&i.Email,
 			&i.FullName,
@@ -103,7 +105,7 @@ func (q *Queries) GetAllEvents(ctx context.Context, arg GetAllEventsParams) ([]G
 }
 
 const getEventById = `-- name: GetEventById :one
-SELECT events.id, name, place, date, host, admin_id, admins.id, email, full_name, deleted_at FROM events
+SELECT events.id, name, place, date, host, admin_id, created_at, admins.id, email, full_name, deleted_at FROM events
 INNER JOIN admins ON events.admin_id = admins.id
 WHERE events.id = $1
 `
@@ -115,6 +117,7 @@ type GetEventByIdRow struct {
 	Date      pgtype.Date
 	Host      string
 	AdminID   uuid.UUID
+	CreatedAt pgtype.Timestamp
 	ID_2      uuid.UUID
 	Email     string
 	FullName  string
@@ -131,6 +134,7 @@ func (q *Queries) GetEventById(ctx context.Context, id uuid.UUID) (GetEventByIdR
 		&i.Date,
 		&i.Host,
 		&i.AdminID,
+		&i.CreatedAt,
 		&i.ID_2,
 		&i.Email,
 		&i.FullName,

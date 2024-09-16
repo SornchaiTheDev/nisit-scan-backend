@@ -168,6 +168,10 @@ func (h *eventHandler) getPagination(c *fiber.Ctx) error {
 		})
 	}
 
+	if len(responseEvents) == 0 {
+		responseEvents = []*responses.EventResponse{}
+	}
+
 	count, err := h.eventService.GetEventsCount(search)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
