@@ -22,7 +22,10 @@ func main() {
 
 	dbUrl := os.Getenv("DATABASE_URL")
 	log.Println("Database URL: ", dbUrl)
-	conn, err := pgxpool.New(context.Background(), dbUrl)
+
+	ctx := context.Background()
+
+	conn, err := pgxpool.New(ctx, dbUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,11 +42,11 @@ func main() {
 	q := sqlc.New(conn)
 
 	// Init repositories
-	adminRepo := repositories.NewAdminRepo(q)
-	eventRepo := repositories.NewEventRepo(q)
-	staffRepo := repositories.NewStaffRepository(q)
-	participantRepo := repositories.NewParticipantRepo(q)
-	tokenRepo := repositories.NewTokenRepository(q)
+	adminRepo := repositories.NewAdminRepo(ctx, q)
+	eventRepo := repositories.NewEventRepo(ctx, q)
+	staffRepo := repositories.NewStaffRepository(ctx, q)
+	participantRepo := repositories.NewParticipantRepo(ctx, q)
+	tokenRepo := repositories.NewTokenRepository(ctx, q)
 
 	// Init Service
 	adminService := services.NewAdminService(adminRepo)
@@ -69,8 +72,5 @@ func main() {
 	rest.NewEventHandler(app, adminService, eventService, staffService, participantService)
 	rest.NewAuthHandler(app, authService, tokenService)
 
-	err = app.Listen(fmt.Sprintf(":%s", port))
-	if err != nil {
-		log.Fatal(err)
-	}
+	log.Fatal(app.Listen(fmt.Sprintf(":%s", port)))
 }

@@ -14,12 +14,14 @@ import (
 )
 
 type staffRepository struct {
-	q *sqlc.Queries
+	ctx context.Context
+	q   *sqlc.Queries
 }
 
-func NewStaffRepository(q *sqlc.Queries) repositories.StaffRepository {
+func NewStaffRepository(ctx context.Context, q *sqlc.Queries) repositories.StaffRepository {
 	return &staffRepository{
-		q: q,
+		ctx: ctx,
+		q:   q,
 	}
 }
 
@@ -32,7 +34,7 @@ func (s *staffRepository) AddStaffs(email []string, eventId uuid.UUID) error {
 		})
 	}
 
-	_, err := s.q.CreateStaffsRecord(context.Background(), staffs)
+	_, err := s.q.CreateStaffsRecord(s.ctx, staffs)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -50,12 +52,12 @@ func (s *staffRepository) AddStaffs(email []string, eventId uuid.UUID) error {
 }
 
 func (s *staffRepository) DeleteAll(eventId uuid.UUID) error {
-	err := s.q.DeleteAllStaffFromEvent(context.Background(), eventId)
+	err := s.q.DeleteAllStaffFromEvent(s.ctx, eventId)
 	return err
 }
 
 func (s *staffRepository) GetAllFromEvent(id *uuid.UUID) ([]*entities.Staff, error) {
-	staffs, err := s.q.GetStaffByEventId(context.Background(), *id)
+	staffs, err := s.q.GetStaffByEventId(s.ctx, *id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nerrors.ErrStaffNotFound
@@ -74,7 +76,7 @@ func (s *staffRepository) GetAllFromEvent(id *uuid.UUID) ([]*entities.Staff, err
 }
 
 func (s *staffRepository) GetByEmail(email string) ([]entities.Staff, error) {
-	staffs, err := s.q.GetStaffsByEmail(context.Background(), email)
+	staffs, err := s.q.GetStaffsByEmail(s.ctx, email)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nerrors.ErrStaffNotFound
@@ -95,7 +97,7 @@ func (s *staffRepository) GetByEmail(email string) ([]entities.Staff, error) {
 }
 
 func (s *staffRepository) GetByEmailAndEventId(email string, eventId uuid.UUID) (*entities.Staff, error) {
-	staff, err := s.q.GetStaffsByEmailAndEventId(context.Background(), sqlc.GetStaffsByEmailAndEventIdParams{
+	staff, err := s.q.GetStaffsByEmailAndEventId(s.ctx, sqlc.GetStaffsByEmailAndEventIdParams{
 		Email:   email,
 		EventID: eventId,
 	})

@@ -16,12 +16,14 @@ import (
 )
 
 type participantRepo struct {
-	q *sqlc.Queries
+	ctx context.Context
+	q   *sqlc.Queries
 }
 
-func NewParticipantRepo(q *sqlc.Queries) repositories.ParticipantRepository {
+func NewParticipantRepo(ctx context.Context, q *sqlc.Queries) repositories.ParticipantRepository {
 	return &participantRepo{
-		q: q,
+		ctx: ctx,
+		q:   q,
 	}
 }
 
@@ -32,7 +34,7 @@ func (p *participantRepo) AddParticipant(eventId uuid.UUID, barcode string, time
 		return nil, err
 	}
 
-	c, err := p.q.CreateParticipantRecord(context.Background(), sqlc.CreateParticipantRecordParams{
+	c, err := p.q.CreateParticipantRecord(p.ctx, sqlc.CreateParticipantRecordParams{
 		Barcode:   barcode,
 		Timestamp: t,
 		EventID:   eventId,
@@ -55,7 +57,7 @@ func (p *participantRepo) AddParticipant(eventId uuid.UUID, barcode string, time
 }
 
 func (p *participantRepo) GetParticipants(eventId uuid.UUID, barcode string, pageIndex int32, pageSize int32) ([]entities.Participant, error) {
-	participants, err := p.q.GetParticipantPagination(context.Background(), sqlc.GetParticipantPaginationParams{
+	participants, err := p.q.GetParticipantPagination(p.ctx, sqlc.GetParticipantPaginationParams{
 		EventID: eventId,
 		Limit:   pageSize,
 		Offset:  pageIndex * pageSize,
@@ -85,7 +87,7 @@ func (p *participantRepo) RemoveParticipants(eventId uuid.UUID, barcodes []strin
 		})
 	}
 
-	op := p.q.DeleteParticipantsByBarcode(context.Background(), payload)
+	op := p.q.DeleteParticipantsByBarcode(p.ctx, payload)
 	defer op.Close()
 
 	var err error
@@ -100,7 +102,7 @@ func (p *participantRepo) RemoveParticipants(eventId uuid.UUID, barcodes []strin
 }
 
 func (p *participantRepo) CountParticipants(eventId uuid.UUID, barcode string) (*int64, error) {
-	count, err := p.q.GetParticipantCount(context.Background(), sqlc.GetParticipantCountParams{
+	count, err := p.q.GetParticipantCount(p.ctx, sqlc.GetParticipantCountParams{
 		EventID: eventId,
 		Barcode: fmt.Sprintf("%%%s%%", barcode),
 	})

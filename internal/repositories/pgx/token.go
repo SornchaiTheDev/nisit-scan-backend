@@ -11,17 +11,19 @@ import (
 )
 
 type tokenRepo struct {
-	q *sqlc.Queries
+	ctx context.Context
+	q   *sqlc.Queries
 }
 
-func NewTokenRepository(q *sqlc.Queries) repositories.TokenRepository {
+func NewTokenRepository(ctx context.Context, q *sqlc.Queries) repositories.TokenRepository {
 	return &tokenRepo{
-		q: q,
+		ctx: ctx,
+		q:   q,
 	}
 }
 
 func (r *tokenRepo) GetRefreshToken(email string) (*entities.RefreshToken, error) {
-	record, err := r.q.GetRefreshToken(context.Background(), email)
+	record, err := r.q.GetRefreshToken(r.ctx, email)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nerrors.ErrTokenNotFound
@@ -35,7 +37,7 @@ func (r *tokenRepo) GetRefreshToken(email string) (*entities.RefreshToken, error
 }
 
 func (r *tokenRepo) AddRefreshToken(email string, token string) error {
-	err := r.q.CreateRefreshToken(context.Background(), sqlc.CreateRefreshTokenParams{
+	err := r.q.CreateRefreshToken(r.ctx, sqlc.CreateRefreshTokenParams{
 		Email: email,
 		Token: token,
 	})
@@ -47,7 +49,7 @@ func (r *tokenRepo) AddRefreshToken(email string, token string) error {
 }
 
 func (r *tokenRepo) RemoveRefreshToken(email string) error {
-	err := r.q.DeleteRefreshToken(context.Background(), email)
+	err := r.q.DeleteRefreshToken(r.ctx, email)
 	if err != nil {
 		return err
 	}

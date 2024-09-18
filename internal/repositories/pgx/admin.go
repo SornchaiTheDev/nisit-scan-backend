@@ -18,17 +18,19 @@ import (
 )
 
 type adminRepoImpl struct {
-	q *sqlc.Queries
+	ctx context.Context
+	q   *sqlc.Queries
 }
 
-func NewAdminRepo(q *sqlc.Queries) repositories.AdminRepository {
+func NewAdminRepo(ctx context.Context, q *sqlc.Queries) repositories.AdminRepository {
 	return &adminRepoImpl{
-		q: q,
+		ctx: ctx,
+		q:   q,
 	}
 }
 
 func (r *adminRepoImpl) GetById(id uuid.UUID) (*entities.Admin, error) {
-	admin, err := r.q.GetAdminById(context.Background(), id)
+	admin, err := r.q.GetAdminById(r.ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nerrors.ErrAdminNotFound
@@ -51,7 +53,7 @@ func (r *adminRepoImpl) Create(e *entities.Admin) error {
 		FullName: e.FullName,
 	}
 
-	err := r.q.CreateAdmin(context.Background(), admin)
+	err := r.q.CreateAdmin(r.ctx, admin)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
@@ -79,7 +81,7 @@ func (r *adminRepoImpl) DeleteByIds(ids []uuid.UUID) error {
 		payload = append(payload, p)
 	}
 
-	op := r.q.DeleteAdminByIds(context.Background(), payload)
+	op := r.q.DeleteAdminByIds(r.ctx, payload)
 	defer op.Close()
 
 	var err error
@@ -113,7 +115,7 @@ func (r *adminRepoImpl) UpdateById(id uuid.UUID, value *requests.AdminRequest) e
 		Email:    value.Email,
 	}
 
-	err = r.q.UpdateAdminById(context.Background(), payload)
+	err = r.q.UpdateAdminById(r.ctx, payload)
 	if err != nil {
 		return nerrors.ErrSomethingWentWrong
 	}
@@ -123,7 +125,7 @@ func (r *adminRepoImpl) UpdateById(id uuid.UUID, value *requests.AdminRequest) e
 func (r *adminRepoImpl) GetAll(req *requests.GetAdminsPaginationParams) ([]entities.Admin, error) {
 
 	search := fmt.Sprintf("%%%s%%", req.Search)
-	admins, err := r.q.GetAllAdmins(context.Background(), sqlc.GetAllAdminsParams{
+	admins, err := r.q.GetAllAdmins(r.ctx, sqlc.GetAllAdminsParams{
 		Email:    search,
 		FullName: search,
 		Offset:   req.PageSize * req.PageIndex,
@@ -150,7 +152,7 @@ func (r *adminRepoImpl) GetAll(req *requests.GetAdminsPaginationParams) ([]entit
 func (r *adminRepoImpl) CountAll(search string) (int64, error) {
 	search = fmt.Sprintf("%%%s%%", search)
 
-	count, err := r.q.CountAllAdmins(context.Background(), sqlc.CountAllAdminsParams{
+	count, err := r.q.CountAllAdmins(r.ctx, sqlc.CountAllAdminsParams{
 		Email:    search,
 		FullName: search,
 	})
@@ -163,7 +165,7 @@ func (r *adminRepoImpl) CountAll(search string) (int64, error) {
 }
 
 func (r *adminRepoImpl) GetByEmail(email string) (*entities.Admin, error) {
-	admin, err := r.q.GetAdminByEmail(context.Background(), email)
+	admin, err := r.q.GetAdminByEmail(r.ctx, email)
 	if err != nil {
 		return nil, nerrors.ErrAdminNotFound
 	}

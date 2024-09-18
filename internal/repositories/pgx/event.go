@@ -16,17 +16,19 @@ import (
 )
 
 type eventRepoImpl struct {
-	q *sqlc.Queries
+	ctx context.Context
+	q   *sqlc.Queries
 }
 
-func NewEventRepo(q *sqlc.Queries) repositories.EventRepository {
+func NewEventRepo(ctx context.Context, q *sqlc.Queries) repositories.EventRepository {
 	return &eventRepoImpl{
-		q: q,
+		ctx: ctx,
+		q:   q,
 	}
 }
 
 func (e *eventRepoImpl) GetPagination(search string, pageIndex int32, pageSize int32) ([]*entities.Event, error) {
-	events, err := e.q.GetAllEvents(context.Background(), sqlc.GetAllEventsParams{
+	events, err := e.q.GetAllEvents(e.ctx, sqlc.GetAllEventsParams{
 		Name:   fmt.Sprintf("%%%s%%", search),
 		Offset: pageIndex * pageSize,
 		Limit:  pageSize,
@@ -51,7 +53,7 @@ func (e *eventRepoImpl) GetPagination(search string, pageIndex int32, pageSize i
 }
 
 func (e *eventRepoImpl) GetCount(search string) (int64, error) {
-	count, err := e.q.GetEventCount(context.Background(), fmt.Sprintf("%%%s%%", search))
+	count, err := e.q.GetEventCount(e.ctx, fmt.Sprintf("%%%s%%", search))
 	if err != nil {
 		return 0, err
 	}
@@ -60,7 +62,7 @@ func (e *eventRepoImpl) GetCount(search string) (int64, error) {
 }
 
 func (e *eventRepoImpl) GetById(id uuid.UUID) (*entities.Event, error) {
-	event, err := e.q.GetEventById(context.Background(), id)
+	event, err := e.q.GetEventById(e.ctx, id)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nerrors.ErrEventNotFound
@@ -89,7 +91,7 @@ func (e *eventRepoImpl) Create(event *entities.Event, adminId string) error {
 		return err
 	}
 
-	err = e.q.CreateEvent(context.Background(), sqlc.CreateEventParams{
+	err = e.q.CreateEvent(e.ctx, sqlc.CreateEventParams{
 		Name:    event.Name,
 		Place:   event.Place,
 		Date:    date,
@@ -113,7 +115,7 @@ func (e *eventRepoImpl) Create(event *entities.Event, adminId string) error {
 }
 
 func (e *eventRepoImpl) DeleteById(id uuid.UUID) error {
-	err := e.q.DeleteEventById(context.Background(), id)
+	err := e.q.DeleteEventById(e.ctx, id)
 
 	return err
 }
@@ -122,7 +124,7 @@ func (e *eventRepoImpl) UpdateById(id uuid.UUID, event *entities.Event) error {
 	date := pgtype.Date{}
 	date.Scan(event.Date)
 
-	err := e.q.UpdateEventById(context.Background(), sqlc.UpdateEventByIdParams{
+	err := e.q.UpdateEventById(e.ctx, sqlc.UpdateEventByIdParams{
 		ID:    id,
 		Name:  event.Name,
 		Place: event.Place,
