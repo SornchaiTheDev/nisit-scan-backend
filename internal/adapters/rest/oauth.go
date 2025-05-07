@@ -92,7 +92,7 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 		})
 	}
 
-	cookie, err := configs.NewCookie()
+	accessToken, err := configs.NewCookie()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
@@ -100,14 +100,20 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 		})
 	}
 
-	accessToken := cookie
 	accessToken.Name = "accessToken"
 	accessToken.Value = token.AccessToken
 	accessToken.Expires = token.AccessTokenExpired
 
 	c.Cookie(accessToken)
 
-	refreshToken := cookie
+	refreshToken, err := configs.NewCookie()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
 	refreshToken.Name = "refreshToken"
 	refreshToken.Value = token.RefreshToken
 	refreshToken.Expires = token.RefreshTokenExpired
@@ -190,7 +196,7 @@ func (h *GoogleAuthHandler) refreshToken(c *fiber.Ctx) error {
 		})
 	}
 
-	cookie, err := configs.NewCookie()
+	accessTokenC, err := configs.NewCookie()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "SOMETHING_WENT_WRONG",
@@ -198,14 +204,20 @@ func (h *GoogleAuthHandler) refreshToken(c *fiber.Ctx) error {
 		})
 	}
 
-	accessTokenC := cookie
 	accessTokenC.Name = "accessToken"
 	accessTokenC.Value = authTokens.AccessToken
 	accessTokenC.Expires = authTokens.AccessTokenExpired
 
 	c.Cookie(accessTokenC)
 
-	refreshTokenC := cookie
+	refreshTokenC, err := configs.NewCookie()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
 	refreshTokenC.Name = "refreshToken"
 	refreshTokenC.Value = authTokens.RefreshToken
 	refreshTokenC.Expires = authTokens.RefreshTokenExpired
