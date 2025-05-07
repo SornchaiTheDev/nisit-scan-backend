@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/adapters/rest"
@@ -62,9 +63,21 @@ func main() {
 
 	app := fiber.New()
 
+	origin := func() string {
+		url := os.Getenv("WEB_URL")
+		regex, err := regexp.Compile(`^(https?://[^/]+)`)
+		if err != nil {
+			log.Fatalln("WEB_URL is not valid")
+		}
+
+		origin := regex.FindString(url)
+
+		return origin
+	}()
+
 	// Middlewares
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     os.Getenv("WEB_URL"),
+		AllowOrigins:     origin,
 		AllowCredentials: true,
 	}))
 
