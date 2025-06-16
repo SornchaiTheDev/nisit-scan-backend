@@ -56,7 +56,22 @@ func (p *participantRepo) AddParticipant(eventId uuid.UUID, barcode string, time
 	}, nil
 }
 
-func (p *participantRepo) GetParticipants(eventId uuid.UUID, barcode string, pageIndex int32, pageSize int32) ([]entities.Participant, error) {
+func (p *participantRepo) GetAllParticipants(eventId uuid.UUID) ([]entities.Participant, error) {
+	participants, err := p.q.GetAllParticipants(p.ctx, eventId)
+	if err != nil {
+		return nil, err
+	}
+	var result []entities.Participant
+	for _, participant := range participants {
+		result = append(result, entities.Participant{
+			Barcode:   participant.Barcode,
+			Timestamp: participant.Timestamp.Time,
+		})
+	}
+	return result, nil
+}
+
+func (p *participantRepo) GetPaginationParticipants(eventId uuid.UUID, barcode string, pageIndex int32, pageSize int32) ([]entities.Participant, error) {
 	participants, err := p.q.GetParticipantPagination(p.ctx, sqlc.GetParticipantPaginationParams{
 		EventID: eventId,
 		Limit:   pageSize,

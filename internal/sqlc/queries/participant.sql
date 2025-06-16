@@ -8,6 +8,11 @@ WHERE event_id = $1 AND barcode LIKE $2
 ORDER BY timestamp DESC
 LIMIT $3 OFFSET $4;
 
+-- name: GetAllParticipants :many
+SELECT * FROM participants 
+WHERE event_id = $1
+ORDER BY timestamp DESC;
+
 -- name: GetParticipantCount :one
 SELECT COUNT(*) FROM participants
 WHERE event_id = $1 AND barcode LIKE $2;

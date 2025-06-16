@@ -2,6 +2,7 @@ package rest
 
 import (
 	"errors"
+	"log"
 	"os"
 	"time"
 
@@ -126,6 +127,7 @@ func (h *GoogleAuthHandler) callback(c *fiber.Ctx) error {
 	}
 
 	redirectTo := sess.Get("redirect_to")
+	log.Println(redirectTo)
 
 	if redirectTo == nil {
 		return c.Redirect(h.webUrl, fiber.StatusTemporaryRedirect)

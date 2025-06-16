@@ -13,7 +13,8 @@ import (
 
 type ParticipantService interface {
 	AddParticipant(eventId string, r *requests.AddParticipant) (*entities.Participant, error)
-	GetParticipants(eventId string, search string, pageIndex string, pageSize string) ([]entities.Participant, error)
+	GetPaginationParticipants(eventId string, search string, pageIndex string, pageSize string) ([]entities.Participant, error)
+	GetAllParticipants(eventId string) ([]entities.Participant, error)
 	RemoveParticipants(eventId string, barcode []string) error
 	GetCountParticipants(eventId string, search string) (*int64, error)
 }
@@ -22,7 +23,7 @@ type participantService struct {
 	repo repositories.ParticipantRepository
 }
 
-func NewParticipantService(repo repositories.ParticipantRepository) *participantService {
+func NewParticipantService(repo repositories.ParticipantRepository) ParticipantService {
 	return &participantService{
 		repo: repo,
 	}
@@ -42,7 +43,22 @@ func (p *participantService) AddParticipant(eventId string, r *requests.AddParti
 	return p.repo.AddParticipant(parsedId, r.Barcode, parsedTimestamp)
 }
 
-func (p *participantService) GetParticipants(eventId string, search string, pageIndex string, pageSize string) ([]entities.Participant, error) {
+func (p *participantService) GetAllParticipants(eventId string) ([]entities.Participant, error) {
+	parsedId, err := uuid.Parse(eventId)
+	if err != nil {
+		return nil, nerrors.ErrCannotParseUUID
+	}
+	participants, err := p.repo.GetAllParticipants(parsedId)
+	if err != nil {
+		return nil, err
+	}
+	if participants == nil {
+		return []entities.Participant{}, nil
+	}
+	return participants, nil
+}
+
+func (p *participantService) GetPaginationParticipants(eventId string, search string, pageIndex string, pageSize string) ([]entities.Participant, error) {
 
 	parsedId, err := uuid.Parse(eventId)
 	if err != nil {
@@ -59,7 +75,7 @@ func (p *participantService) GetParticipants(eventId string, search string, page
 		return nil, err
 	}
 
-	participants, err := p.repo.GetParticipants(parsedId, search, int32(parsedIndex), int32(parsedSize))
+	participants, err := p.repo.GetPaginationParticipants(parsedId, search, int32(parsedIndex), int32(parsedSize))
 	if err != nil {
 		return nil, err
 	}

@@ -68,6 +68,7 @@ func NewEventHandler(app *fiber.App, adminService services.AdminService, eventSe
 
 	// Participants
 	participants := event.Group("/:id/participants", staffMiddeleware.Staff)
+	participants.Get("/all", handler.getAllParticipants)
 	participants.Get("/", handler.getParticipantsPagination)
 	participants.Post("/", handler.addParticipant)
 	participants.Post("/batchdelete", handler.removeParticipant)
@@ -360,6 +361,35 @@ func (h *eventHandler) setStaffs(c *fiber.Ctx) error {
 
 }
 
+func (h *eventHandler) getAllParticipants(c *fiber.Ctx) error {
+	eventId := c.Params("id")
+
+	_, err := h.eventService.GetById(eventId)
+	if err != nil {
+		if errors.Is(err, nerrors.ErrEventNotFound) {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"code":    "EVENT_NOT_FOUND",
+				"message": "Event not found",
+			})
+		}
+
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "SOMETHING_WENT_WRONG",
+			"message": "Something went wrong",
+		})
+	}
+
+	participants, err := h.participantService.GetAllParticipants(eventId)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"code":    "INTERNAL_SERVER_ERROR",
+			"message": "Internal server error",
+		})
+	}
+
+	return c.JSON(participants)
+}
+
 func (h *eventHandler) getParticipantsPagination(c *fiber.Ctx) error {
 	pageIndex := c.Query("pageIndex")
 	pageSize := c.Query("pageSize")
@@ -381,7 +411,7 @@ func (h *eventHandler) getParticipantsPagination(c *fiber.Ctx) error {
 		})
 	}
 
-	participants, err := h.participantService.GetParticipants(eventId, search, pageIndex, pageSize)
+	participants, err := h.participantService.GetPaginationParticipants(eventId, search, pageIndex, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"code":    "INTERNAL_SERVER_ERROR",
