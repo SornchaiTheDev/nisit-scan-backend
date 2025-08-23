@@ -2,6 +2,7 @@ package pgx
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
@@ -13,15 +14,15 @@ type userRepository struct {
 	q *sqlc.Queries
 }
 
-func NewUserRepository(ctx context.Context, q *sqlc.Queries) repositories.UserRepository {
+func NewUserRepository(q *sqlc.Queries) repositories.UserRepository {
 	return &userRepository{
-		q:   q,
+		q: q,
 	}
 }
 
 func (u *userRepository) Create(ctx context.Context, user *entities.User) error {
 	_, err := u.q.CreateUsers(ctx, []sqlc.CreateUsersParams{
-		sqlc.CreateUsersParams{
+		{
 			Code:     user.Code,
 			FullName: user.FullName,
 			Gmail:    user.Gmail,
@@ -54,7 +55,7 @@ func (u *userRepository) CreateMany(ctx context.Context, users []entities.User) 
 }
 
 func (u *userRepository) UpdateByCode(ctx context.Context, code string, user *entities.User) error {
-	err := u.q.UpdateUserById(ctx, sqlc.UpdateUserByIdParams{
+	err := u.q.UpdateUserByCode(ctx, sqlc.UpdateUserByCodeParams{
 		Code:     user.Code,
 		FullName: user.FullName,
 		Gmail:    user.Gmail,
@@ -84,16 +85,15 @@ func (u *userRepository) GetByCode(ctx context.Context, code string) (*entities.
 
 func (u *userRepository) GetAll(ctx context.Context, r *requests.GetUsersPaginationParams) ([]entities.User, error) {
 	sqlUsers, err := u.q.GetAllUsers(ctx, sqlc.GetAllUsersParams{
-		Code:   r.Search,
-		Limit:  r.PageSize,
-		Offset: r.PageIndex,
+		Code:   fmt.Sprintf("%%%s%%", r.Search),
+		Limit:  int32(r.PageSize),
+		Offset: int32(r.PageIndex * r.PageSize),
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	users := make([]entities.User, len(sqlUsers))
-
 	for i, sqlUser := range sqlUsers {
 		users[i] = entities.User{
 			Code:     sqlUser.Code,
@@ -106,8 +106,8 @@ func (u *userRepository) GetAll(ctx context.Context, r *requests.GetUsersPaginat
 	return users, nil
 }
 
-func (u *userRepository) DeleteByCode(ctx context.Context, codes []string) error {
-	op := u.q.DeleteUserByIds(ctx, codes)
+func (u *userRepository) DeleteByCodes(ctx context.Context, codes []string) error {
+	op := u.q.DeleteUserByCodes(ctx, codes)
 	defer op.Close()
 
 	var err error
@@ -124,5 +124,5 @@ func (u *userRepository) DeleteByCode(ctx context.Context, codes []string) error
 }
 
 func (u *userRepository) CountAll(ctx context.Context, search string) (int64, error) {
-	return u.q.CountUsers(ctx, search)
+	return u.q.CountUsers(ctx, fmt.Sprintf("%%%s%%", search))
 }

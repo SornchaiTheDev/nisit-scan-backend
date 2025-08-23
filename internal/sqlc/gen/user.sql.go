@@ -83,7 +83,7 @@ func (q *Queries) GetUserByCode(ctx context.Context, code string) (User, error) 
 	return i, err
 }
 
-const updateUserById = `-- name: UpdateUserById :exec
+const updateUserByCode = `-- name: UpdateUserByCode :exec
 UPDATE users
 SET code = $1,
     full_name = $2,
@@ -92,7 +92,7 @@ SET code = $1,
 WHERE code = $5
 `
 
-type UpdateUserByIdParams struct {
+type UpdateUserByCodeParams struct {
 	Code     string
 	FullName string
 	Gmail    string
@@ -100,8 +100,8 @@ type UpdateUserByIdParams struct {
 	Code_2   string
 }
 
-func (q *Queries) UpdateUserById(ctx context.Context, arg UpdateUserByIdParams) error {
-	_, err := q.db.Exec(ctx, updateUserById,
+func (q *Queries) UpdateUserByCode(ctx context.Context, arg UpdateUserByCodeParams) error {
+	_, err := q.db.Exec(ctx, updateUserByCode,
 		arg.Code,
 		arg.FullName,
 		arg.Gmail,

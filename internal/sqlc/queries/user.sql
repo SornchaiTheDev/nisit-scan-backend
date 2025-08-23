@@ -11,7 +11,7 @@ LIMIT $2 OFFSET $3;
 -- name: CreateUsers :copyfrom
 INSERT INTO users (code,full_name,gmail,major) VALUES ($1,$2,$3,$4);
 
--- name: UpdateUserById :exec
+-- name: UpdateUserByCode :exec
 UPDATE users
 SET code = $1,
     full_name = $2,
@@ -19,7 +19,7 @@ SET code = $1,
     major = $4
 WHERE code = $5;
 
--- name: DeleteUserByIds :batchexec
+-- name: DeleteUserByCodes :batchexec
 DELETE FROM users WHERE code = $1;
 
 -- name: CountUsers :one
