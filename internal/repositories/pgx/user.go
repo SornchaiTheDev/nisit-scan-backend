@@ -1,0 +1,128 @@
+package pgx
+
+import (
+	"context"
+
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
+	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
+)
+
+type userRepository struct {
+	q *sqlc.Queries
+}
+
+func NewUserRepository(ctx context.Context, q *sqlc.Queries) repositories.UserRepository {
+	return &userRepository{
+		q:   q,
+	}
+}
+
+func (u *userRepository) Create(ctx context.Context, user *entities.User) error {
+	_, err := u.q.CreateUsers(ctx, []sqlc.CreateUsersParams{
+		sqlc.CreateUsersParams{
+			Code:     user.Code,
+			FullName: user.FullName,
+			Gmail:    user.Gmail,
+			Major:    user.Major,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *userRepository) CreateMany(ctx context.Context, users []entities.User) error {
+	sqlcUsers := make([]sqlc.CreateUsersParams, len(users))
+
+	for i, user := range users {
+		sqlcUsers[i].Code = user.Code
+		sqlcUsers[i].FullName = user.FullName
+		sqlcUsers[i].Gmail = user.Gmail
+		sqlcUsers[i].Major = user.Major
+	}
+
+	_, err := u.q.CreateUsers(ctx, sqlcUsers)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *userRepository) UpdateByCode(ctx context.Context, code string, user *entities.User) error {
+	err := u.q.UpdateUserById(ctx, sqlc.UpdateUserByIdParams{
+		Code:     user.Code,
+		FullName: user.FullName,
+		Gmail:    user.Gmail,
+		Major:    user.Major,
+		Code_2:   code,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *userRepository) GetByCode(ctx context.Context, code string) (*entities.User, error) {
+	user, err := u.q.GetUserByCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entities.User{
+		Code:     user.Code,
+		FullName: user.FullName,
+		Gmail:    user.Gmail,
+		Major:    user.Major,
+	}, nil
+}
+
+func (u *userRepository) GetAll(ctx context.Context, r *requests.GetUsersPaginationParams) ([]entities.User, error) {
+	sqlUsers, err := u.q.GetAllUsers(ctx, sqlc.GetAllUsersParams{
+		Code:   r.Search,
+		Limit:  r.PageSize,
+		Offset: r.PageIndex,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]entities.User, len(sqlUsers))
+
+	for i, sqlUser := range sqlUsers {
+		users[i] = entities.User{
+			Code:     sqlUser.Code,
+			FullName: sqlUser.FullName,
+			Gmail:    sqlUser.Gmail,
+			Major:    sqlUser.Major,
+		}
+	}
+
+	return users, nil
+}
+
+func (u *userRepository) DeleteByCode(ctx context.Context, codes []string) error {
+	op := u.q.DeleteUserByIds(ctx, codes)
+	defer op.Close()
+
+	var err error
+	op.Exec(func(i int, _err error) {
+		if _err != nil {
+			err = _err
+		}
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (u *userRepository) CountAll(ctx context.Context, search string) (int64, error) {
+	return u.q.CountUsers(ctx, search)
+}

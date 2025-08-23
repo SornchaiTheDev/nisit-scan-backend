@@ -41,3 +41,10 @@ type Staff struct {
 	Email   string
 	EventID uuid.UUID
 }
+
+type User struct {
+	Code     string
+	FullName string
+	Gmail    string
+	Major    string
+}

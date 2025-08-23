@@ -39,3 +39,10 @@ CREATE TABLE refresh_tokens (
 	email VARCHAR(255) PRIMARY KEY,
 	token VARCHAR(255) NOT NULL
 );
+
+CREATE TABLE users (
+	code VARCHAR(10) PRIMARY KEY,
+	full_name TEXT NOT NULL,
+	gmail TEXT NOT NULL,
+	major VARCHAR(6) NOT NULL
+)

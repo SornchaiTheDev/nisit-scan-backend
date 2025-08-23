@@ -116,3 +116,46 @@ func (b *DeleteParticipantsByBarcodeBatchResults) Close() error {
 	b.closed = true
 	return b.br.Close()
 }
+
+const deleteUserByIds = `-- name: DeleteUserByIds :batchexec
+DELETE FROM users WHERE code = $1
+`
+
+type DeleteUserByIdsBatchResults struct {
+	br     pgx.BatchResults
+	tot    int
+	closed bool
+}
+
+func (q *Queries) DeleteUserByIds(ctx context.Context, code []string) *DeleteUserByIdsBatchResults {
+	batch := &pgx.Batch{}
+	for _, a := range code {
+		vals := []interface{}{
+			a,
+		}
+		batch.Queue(deleteUserByIds, vals...)
+	}
+	br := q.db.SendBatch(ctx, batch)
+	return &DeleteUserByIdsBatchResults{br, len(code), false}
+}
+
+func (b *DeleteUserByIdsBatchResults) Exec(f func(int, error)) {
+	defer b.br.Close()
+	for t := 0; t < b.tot; t++ {
+		if b.closed {
+			if f != nil {
+				f(t, ErrBatchAlreadyClosed)
+			}
+			continue
+		}
+		_, err := b.br.Exec()
+		if f != nil {
+			f(t, err)
+		}
+	}
+}
+
+func (b *DeleteUserByIdsBatchResults) Close() error {
+	b.closed = true
+	return b.br.Close()
+}
