@@ -11,7 +11,7 @@ import (
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/adapters/rest"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/auth"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/libs"
-	repositories "github.com/SornchaiTheDev/nisit-scan-backend/internal/repositories/pgx"
+	"github.com/SornchaiTheDev/nisit-scan-backend/internal/repositories/pgx"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -43,11 +43,12 @@ func main() {
 	q := sqlc.New(conn)
 
 	// Init repositories
-	adminRepo := repositories.NewAdminRepo(ctx, q)
-	eventRepo := repositories.NewEventRepo(ctx, q)
-	staffRepo := repositories.NewStaffRepository(ctx, q)
-	participantRepo := repositories.NewParticipantRepo(ctx, q)
-	tokenRepo := repositories.NewTokenRepository(ctx, q)
+	adminRepo := pgx.NewAdminRepo(ctx, q)
+	eventRepo := pgx.NewEventRepo(ctx, q)
+	staffRepo := pgx.NewStaffRepository(ctx, q)
+	participantRepo := pgx.NewParticipantRepo(ctx, q)
+	tokenRepo := pgx.NewTokenRepository(ctx, q)
+	userRepo := pgx.NewUserRepository(q)
 
 	// Init Service
 	adminService := services.NewAdminService(adminRepo)
@@ -55,6 +56,7 @@ func main() {
 	staffService := services.NewStaffService(staffRepo)
 	participantService := services.NewParticipantService(participantRepo)
 	tokenService := services.NewTokenService(tokenRepo)
+	userService := services.NewUserService(userRepo)
 
 	// Init Auth
 	authService := auth.NewGoogleOAuth(adminService, staffService)
@@ -84,6 +86,7 @@ func main() {
 	rest.NewAdminHandler(app, adminService)
 	rest.NewEventHandler(app, adminService, eventService, staffService, participantService)
 	rest.NewAuthHandler(app, authService, tokenService)
+	rest.NewUserHandler(app, userService)
 
 	log.Fatal(app.Listen(fmt.Sprintf(":%s", port)))
 }
