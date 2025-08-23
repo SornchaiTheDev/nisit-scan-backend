@@ -2,12 +2,16 @@ package pgx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/repositories"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	sqlc "github.com/SornchaiTheDev/nisit-scan-backend/internal/sqlc/gen"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type userRepository struct {
@@ -30,6 +34,12 @@ func (u *userRepository) Create(ctx context.Context, user *entities.User) error 
 		},
 	})
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return nerrors.ErrUserAlreadyExists
+			}
+		}
 		return err
 	}
 
@@ -48,6 +58,12 @@ func (u *userRepository) CreateMany(ctx context.Context, users []entities.User) 
 
 	_, err := u.q.CreateUsers(ctx, sqlcUsers)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return nerrors.ErrUserAlreadyExists
+			}
+		}
 		return err
 	}
 
@@ -72,6 +88,9 @@ func (u *userRepository) UpdateByCode(ctx context.Context, code string, user *en
 func (u *userRepository) GetByCode(ctx context.Context, code string) (*entities.User, error) {
 	user, err := u.q.GetUserByCode(ctx, code)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nerrors.ErrUserNotFound
+		}
 		return nil, err
 	}
 

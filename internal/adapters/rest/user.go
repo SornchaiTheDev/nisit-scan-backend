@@ -1,9 +1,11 @@
 package rest
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/entities"
+	"github.com/SornchaiTheDev/nisit-scan-backend/domain/nerrors"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/requests"
 	"github.com/SornchaiTheDev/nisit-scan-backend/domain/services"
 	"github.com/SornchaiTheDev/nisit-scan-backend/internal/middleware"
@@ -25,6 +27,12 @@ func NewUserHandler(app *fiber.App, service services.UserService) {
 
 		err = service.Create(c.Context(), &user)
 		if err != nil {
+			if errors.Is(err, nerrors.ErrUserAlreadyExists) {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"code":    "USER_ALREADY_EXISTS",
+					"message": "User already exists",
+				})
+			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "INTERNAL_SERVER_ERROR",
 				"message": "Something went wrong",
@@ -73,10 +81,15 @@ func NewUserHandler(app *fiber.App, service services.UserService) {
 		code := c.Params("code")
 		user, err := service.GetByCode(c.Context(), code)
 		if err != nil {
+			if errors.Is(err, nerrors.ErrUserNotFound) {
+				return c.JSON(nil)
+			}
+
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"code":    "INTERNAL_SERVER_ERROR",
 				"message": "Cannot get user",
 			})
+
 		}
 
 		return c.JSON(user)
