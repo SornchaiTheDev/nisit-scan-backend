@@ -18,6 +18,59 @@ var (
 	ErrBatchAlreadyClosed = errors.New("batch already closed")
 )
 
+const createUsers = `-- name: CreateUsers :batchexec
+INSERT INTO users (code,full_name,gmail,major) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING
+`
+
+type CreateUsersBatchResults struct {
+	br     pgx.BatchResults
+	tot    int
+	closed bool
+}
+
+type CreateUsersParams struct {
+	Code     string
+	FullName string
+	Gmail    string
+	Major    string
+}
+
+func (q *Queries) CreateUsers(ctx context.Context, arg []CreateUsersParams) *CreateUsersBatchResults {
+	batch := &pgx.Batch{}
+	for _, a := range arg {
+		vals := []interface{}{
+			a.Code,
+			a.FullName,
+			a.Gmail,
+			a.Major,
+		}
+		batch.Queue(createUsers, vals...)
+	}
+	br := q.db.SendBatch(ctx, batch)
+	return &CreateUsersBatchResults{br, len(arg), false}
+}
+
+func (b *CreateUsersBatchResults) Exec(f func(int, error)) {
+	defer b.br.Close()
+	for t := 0; t < b.tot; t++ {
+		if b.closed {
+			if f != nil {
+				f(t, ErrBatchAlreadyClosed)
+			}
+			continue
+		}
+		_, err := b.br.Exec()
+		if f != nil {
+			f(t, err)
+		}
+	}
+}
+
+func (b *CreateUsersBatchResults) Close() error {
+	b.closed = true
+	return b.br.Close()
+}
+
 const deleteAdminByIds = `-- name: DeleteAdminByIds :batchexec
 UPDATE admins SET deleted_at = $1 
 WHERE id = $2

@@ -25,7 +25,7 @@ func NewUserRepository(q *sqlc.Queries) repositories.UserRepository {
 }
 
 func (u *userRepository) Create(ctx context.Context, user *entities.User) error {
-	_, err := u.q.CreateUsers(ctx, []sqlc.CreateUsersParams{
+	return u.CreateMany(ctx, []entities.User{
 		{
 			Code:     user.Code,
 			FullName: user.FullName,
@@ -33,17 +33,6 @@ func (u *userRepository) Create(ctx context.Context, user *entities.User) error 
 			Major:    user.Major,
 		},
 	})
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return nerrors.ErrUserAlreadyExists
-			}
-		}
-		return err
-	}
-
-	return nil
 }
 
 func (u *userRepository) CreateMany(ctx context.Context, users []entities.User) error {
@@ -56,14 +45,22 @@ func (u *userRepository) CreateMany(ctx context.Context, users []entities.User) 
 		sqlcUsers[i].Major = user.Major
 	}
 
-	_, err := u.q.CreateUsers(ctx, sqlcUsers)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == "23505" {
-				return nerrors.ErrUserAlreadyExists
+	br := u.q.CreateUsers(ctx, sqlcUsers)
+	defer br.Close()
+
+	var err error
+	br.Exec(func(i int, _err error) {
+		if _err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(_err, &pgErr) {
+				if pgErr.Code == "23505" {
+					err = nerrors.ErrUserAlreadyExists
+				}
 			}
+			err = _err
 		}
+	})
+	if err != nil {
 		return err
 	}
 

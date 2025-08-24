@@ -21,13 +21,6 @@ func (q *Queries) CountUsers(ctx context.Context, code string) (int64, error) {
 	return count, err
 }
 
-type CreateUsersParams struct {
-	Code     string
-	FullName string
-	Gmail    string
-	Major    string
-}
-
 const getAllUsers = `-- name: GetAllUsers :many
 SELECT code, full_name, gmail, major FROM users
 WHERE (code LIKE $1 OR full_name LIKE $1 OR gmail LIKE $1 OR major LIKE $1)

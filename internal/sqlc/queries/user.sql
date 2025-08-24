@@ -8,8 +8,8 @@ WHERE (code LIKE $1 OR full_name LIKE $1 OR gmail LIKE $1 OR major LIKE $1)
 ORDER BY code
 LIMIT $2 OFFSET $3;
 
--- name: CreateUsers :copyfrom
-INSERT INTO users (code,full_name,gmail,major) VALUES ($1,$2,$3,$4);
+-- name: CreateUsers :batchexec
+INSERT INTO users (code,full_name,gmail,major) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING;
 
 -- name: UpdateUserByCode :exec
 UPDATE users
