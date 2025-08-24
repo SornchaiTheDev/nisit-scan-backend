@@ -30,9 +30,11 @@ CREATE TABLE participants (
 	barcode VARCHAR(14) NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	event_id UUID,
+	user_code VARCHAR(10) NOT NULL,
 
 	PRIMARY KEY(barcode,event_id),
-	FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE
+	FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,
+	FOREIGN KEY(user_code) REFERENCES users(code) ON DELETE CASCADE
 );
 
 CREATE TABLE refresh_tokens (

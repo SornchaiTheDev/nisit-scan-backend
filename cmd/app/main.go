@@ -54,7 +54,7 @@ func main() {
 	adminService := services.NewAdminService(adminRepo)
 	eventService := services.NewEventService(eventRepo)
 	staffService := services.NewStaffService(staffRepo)
-	participantService := services.NewParticipantService(participantRepo)
+	participantService := services.NewParticipantService(participantRepo, userRepo)
 	tokenService := services.NewTokenService(tokenRepo)
 	userService := services.NewUserService(userRepo)
 

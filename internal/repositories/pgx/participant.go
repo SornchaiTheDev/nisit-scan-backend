@@ -27,7 +27,7 @@ func NewParticipantRepo(ctx context.Context, q *sqlc.Queries) repositories.Parti
 	}
 }
 
-func (p *participantRepo) AddParticipant(eventId uuid.UUID, barcode string, timestamp time.Time) (*entities.Participant, error) {
+func (p *participantRepo) AddParticipant(eventId uuid.UUID, barcode string, timestamp time.Time, studentCode string) (*entities.Participant, error) {
 	t := pgtype.Timestamp{}
 	err := t.Scan(timestamp)
 	if err != nil {
@@ -38,6 +38,7 @@ func (p *participantRepo) AddParticipant(eventId uuid.UUID, barcode string, time
 		Barcode:   barcode,
 		Timestamp: t,
 		EventID:   eventId,
+		UserCode:  studentCode,
 	})
 
 	if err != nil {
@@ -66,6 +67,7 @@ func (p *participantRepo) GetAllParticipants(eventId uuid.UUID) ([]entities.Part
 		result = append(result, entities.Participant{
 			Barcode:   participant.Barcode,
 			Timestamp: participant.Timestamp.Time,
+			StudentCode: participant.UserCode,
 		})
 	}
 	return result, nil
@@ -87,6 +89,7 @@ func (p *participantRepo) GetPaginationParticipants(eventId uuid.UUID, barcode s
 		result = append(result, entities.Participant{
 			Barcode:   participant.Barcode,
 			Timestamp: participant.Timestamp.Time,
+			StudentCode: participant.UserCode,
 		})
 	}
 

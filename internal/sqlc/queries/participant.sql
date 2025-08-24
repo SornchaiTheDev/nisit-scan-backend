@@ -1,5 +1,5 @@
 -- name: CreateParticipantRecord :one
-INSERT INTO participants (barcode,timestamp,event_id) VALUES ($1,$2,$3)
+INSERT INTO participants (barcode,timestamp,event_id,user_code) VALUES ($1,$2,$3,$4)
 RETURNING *;
 
 -- name: GetParticipantPagination :many

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"strconv"
 	"time"
 
@@ -20,12 +21,14 @@ type ParticipantService interface {
 }
 
 type participantService struct {
-	repo repositories.ParticipantRepository
+	participantRepo repositories.ParticipantRepository
+	userRepo        repositories.UserRepository
 }
 
-func NewParticipantService(repo repositories.ParticipantRepository) ParticipantService {
+func NewParticipantService(participantRepo repositories.ParticipantRepository, userRepo repositories.UserRepository) ParticipantService {
 	return &participantService{
-		repo: repo,
+		participantRepo: participantRepo,
+		userRepo:        userRepo,
 	}
 }
 
@@ -40,7 +43,21 @@ func (p *participantService) AddParticipant(eventId string, r *requests.AddParti
 		return nil, err
 	}
 
-	return p.repo.AddParticipant(parsedId, r.Barcode, parsedTimestamp)
+	participant, err := p.participantRepo.AddParticipant(parsedId, r.Barcode, parsedTimestamp, r.StudentCode)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := p.userRepo.GetByCode(context.TODO(), r.StudentCode)
+	if err != nil {
+		return nil, err
+	}
+
+	participant.FullName = user.FullName
+	participant.Gmail = user.Gmail
+	participant.Major = user.Major
+
+	return participant, nil
 }
 
 func (p *participantService) GetAllParticipants(eventId string) ([]entities.Participant, error) {
@@ -48,13 +65,26 @@ func (p *participantService) GetAllParticipants(eventId string) ([]entities.Part
 	if err != nil {
 		return nil, nerrors.ErrCannotParseUUID
 	}
-	participants, err := p.repo.GetAllParticipants(parsedId)
+	participants, err := p.participantRepo.GetAllParticipants(parsedId)
 	if err != nil {
 		return nil, err
 	}
 	if participants == nil {
 		return []entities.Participant{}, nil
 	}
+
+	for i, participant := range participants {
+		user, err := p.userRepo.GetByCode(context.TODO(), participant.StudentCode)
+		if err != nil {
+			return nil, err
+		}
+
+		participants[i].StudentCode = user.Code
+		participants[i].FullName = user.FullName
+		participants[i].Gmail = user.Gmail
+		participants[i].Major = user.Major
+	}
+
 	return participants, nil
 }
 
@@ -75,13 +105,25 @@ func (p *participantService) GetPaginationParticipants(eventId string, search st
 		return nil, err
 	}
 
-	participants, err := p.repo.GetPaginationParticipants(parsedId, search, int32(parsedIndex), int32(parsedSize))
+	participants, err := p.participantRepo.GetPaginationParticipants(parsedId, search, int32(parsedIndex), int32(parsedSize))
 	if err != nil {
 		return nil, err
 	}
 
 	if participants == nil {
 		return []entities.Participant{}, nil
+	}
+
+	for i, participant := range participants {
+		user, err := p.userRepo.GetByCode(context.TODO(), participant.StudentCode)
+		if err != nil {
+			return nil, err
+		}
+
+		participants[i].StudentCode = user.Code
+		participants[i].FullName = user.FullName
+		participants[i].Gmail = user.Gmail
+		participants[i].Major = user.Major
 	}
 
 	return participants, nil
@@ -93,7 +135,7 @@ func (p *participantService) RemoveParticipants(eventId string, barcodes []strin
 		return nerrors.ErrCannotParseUUID
 	}
 
-	return p.repo.RemoveParticipants(parsedEventId, barcodes)
+	return p.participantRepo.RemoveParticipants(parsedEventId, barcodes)
 }
 
 func (p *participantService) GetCountParticipants(eventId string, search string) (*int64, error) {
@@ -103,7 +145,7 @@ func (p *participantService) GetCountParticipants(eventId string, search string)
 		return nil, nerrors.ErrCannotParseUUID
 	}
 
-	count, err := p.repo.CountParticipants(parsedId, search)
+	count, err := p.participantRepo.CountParticipants(parsedId, search)
 	if err != nil {
 		return nil, err
 	}

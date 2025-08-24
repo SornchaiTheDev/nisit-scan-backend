@@ -30,6 +30,7 @@ type Participant struct {
 	Barcode   string
 	Timestamp pgtype.Timestamp
 	EventID   uuid.UUID
+	UserCode  string
 }
 
 type RefreshToken struct {

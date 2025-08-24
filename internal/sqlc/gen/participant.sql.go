@@ -13,25 +13,36 @@ import (
 )
 
 const createParticipantRecord = `-- name: CreateParticipantRecord :one
-INSERT INTO participants (barcode,timestamp,event_id) VALUES ($1,$2,$3)
-RETURNING barcode, timestamp, event_id
+INSERT INTO participants (barcode,timestamp,event_id,user_code) VALUES ($1,$2,$3,$4)
+RETURNING barcode, timestamp, event_id, user_code
 `
 
 type CreateParticipantRecordParams struct {
 	Barcode   string
 	Timestamp pgtype.Timestamp
 	EventID   uuid.UUID
+	UserCode  string
 }
 
 func (q *Queries) CreateParticipantRecord(ctx context.Context, arg CreateParticipantRecordParams) (Participant, error) {
-	row := q.db.QueryRow(ctx, createParticipantRecord, arg.Barcode, arg.Timestamp, arg.EventID)
+	row := q.db.QueryRow(ctx, createParticipantRecord,
+		arg.Barcode,
+		arg.Timestamp,
+		arg.EventID,
+		arg.UserCode,
+	)
 	var i Participant
-	err := row.Scan(&i.Barcode, &i.Timestamp, &i.EventID)
+	err := row.Scan(
+		&i.Barcode,
+		&i.Timestamp,
+		&i.EventID,
+		&i.UserCode,
+	)
 	return i, err
 }
 
 const getAllParticipants = `-- name: GetAllParticipants :many
-SELECT barcode, timestamp, event_id FROM participants 
+SELECT barcode, timestamp, event_id, user_code FROM participants 
 WHERE event_id = $1
 ORDER BY timestamp DESC
 `
@@ -45,7 +56,12 @@ func (q *Queries) GetAllParticipants(ctx context.Context, eventID uuid.UUID) ([]
 	var items []Participant
 	for rows.Next() {
 		var i Participant
-		if err := rows.Scan(&i.Barcode, &i.Timestamp, &i.EventID); err != nil {
+		if err := rows.Scan(
+			&i.Barcode,
+			&i.Timestamp,
+			&i.EventID,
+			&i.UserCode,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -74,7 +90,7 @@ func (q *Queries) GetParticipantCount(ctx context.Context, arg GetParticipantCou
 }
 
 const getParticipantPagination = `-- name: GetParticipantPagination :many
-SELECT barcode, timestamp, event_id FROM participants 
+SELECT barcode, timestamp, event_id, user_code FROM participants 
 WHERE event_id = $1 AND barcode LIKE $2
 ORDER BY timestamp DESC
 LIMIT $3 OFFSET $4
@@ -101,7 +117,12 @@ func (q *Queries) GetParticipantPagination(ctx context.Context, arg GetParticipa
 	var items []Participant
 	for rows.Next() {
 		var i Participant
-		if err := rows.Scan(&i.Barcode, &i.Timestamp, &i.EventID); err != nil {
+		if err := rows.Scan(
+			&i.Barcode,
+			&i.Timestamp,
+			&i.EventID,
+			&i.UserCode,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
