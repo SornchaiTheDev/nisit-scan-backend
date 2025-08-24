@@ -30,7 +30,7 @@ CREATE TABLE participants (
 	barcode VARCHAR(14) NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	event_id UUID,
-	user_code VARCHAR(10) NOT NULL,
+	user_code VARCHAR(10),
 
 	PRIMARY KEY(barcode,event_id),
 	FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE,

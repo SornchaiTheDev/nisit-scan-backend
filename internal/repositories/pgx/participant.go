@@ -34,12 +34,27 @@ func (p *participantRepo) AddParticipant(eventId uuid.UUID, barcode string, time
 		return nil, err
 	}
 
-	c, err := p.q.CreateParticipantRecord(p.ctx, sqlc.CreateParticipantRecordParams{
-		Barcode:   barcode,
-		Timestamp: t,
-		EventID:   eventId,
-		UserCode:  studentCode,
-	})
+	var c sqlc.Participant
+	if studentCode == "" {
+		c, err = p.q.CreateParticipantRecordWithoutUserCode(p.ctx, sqlc.CreateParticipantRecordWithoutUserCodeParams{
+			Barcode:   barcode,
+			Timestamp: t,
+			EventID:   eventId,
+		})
+	} else {
+		userCode := pgtype.Text{}
+		err = userCode.Scan(studentCode)
+		if err != nil {
+			return nil, err
+		}
+
+		c, err = p.q.CreateParticipantRecordWithUserCode(p.ctx, sqlc.CreateParticipantRecordWithUserCodeParams{
+			Barcode:   barcode,
+			Timestamp: t,
+			EventID:   eventId,
+			UserCode:  userCode,
+		})
+	}
 
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -65,9 +80,9 @@ func (p *participantRepo) GetAllParticipants(eventId uuid.UUID) ([]entities.Part
 	var result []entities.Participant
 	for _, participant := range participants {
 		result = append(result, entities.Participant{
-			Barcode:   participant.Barcode,
-			Timestamp: participant.Timestamp.Time,
-			StudentCode: participant.UserCode,
+			Barcode:     participant.Barcode,
+			Timestamp:   participant.Timestamp.Time,
+			StudentCode: participant.UserCode.String,
 		})
 	}
 	return result, nil
@@ -87,9 +102,9 @@ func (p *participantRepo) GetPaginationParticipants(eventId uuid.UUID, barcode s
 	var result []entities.Participant
 	for _, participant := range participants {
 		result = append(result, entities.Participant{
-			Barcode:   participant.Barcode,
-			Timestamp: participant.Timestamp.Time,
-			StudentCode: participant.UserCode,
+			Barcode:     participant.Barcode,
+			Timestamp:   participant.Timestamp.Time,
+			StudentCode: participant.UserCode.String,
 		})
 	}
 

@@ -12,25 +12,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createParticipantRecord = `-- name: CreateParticipantRecord :one
+const createParticipantRecordWithUserCode = `-- name: CreateParticipantRecordWithUserCode :one
 INSERT INTO participants (barcode,timestamp,event_id,user_code) VALUES ($1,$2,$3,$4)
 RETURNING barcode, timestamp, event_id, user_code
 `
 
-type CreateParticipantRecordParams struct {
+type CreateParticipantRecordWithUserCodeParams struct {
 	Barcode   string
 	Timestamp pgtype.Timestamp
 	EventID   uuid.UUID
-	UserCode  string
+	UserCode  pgtype.Text
 }
 
-func (q *Queries) CreateParticipantRecord(ctx context.Context, arg CreateParticipantRecordParams) (Participant, error) {
-	row := q.db.QueryRow(ctx, createParticipantRecord,
+func (q *Queries) CreateParticipantRecordWithUserCode(ctx context.Context, arg CreateParticipantRecordWithUserCodeParams) (Participant, error) {
+	row := q.db.QueryRow(ctx, createParticipantRecordWithUserCode,
 		arg.Barcode,
 		arg.Timestamp,
 		arg.EventID,
 		arg.UserCode,
 	)
+	var i Participant
+	err := row.Scan(
+		&i.Barcode,
+		&i.Timestamp,
+		&i.EventID,
+		&i.UserCode,
+	)
+	return i, err
+}
+
+const createParticipantRecordWithoutUserCode = `-- name: CreateParticipantRecordWithoutUserCode :one
+INSERT INTO participants (barcode,timestamp,event_id) VALUES ($1,$2,$3)
+RETURNING barcode, timestamp, event_id, user_code
+`
+
+type CreateParticipantRecordWithoutUserCodeParams struct {
+	Barcode   string
+	Timestamp pgtype.Timestamp
+	EventID   uuid.UUID
+}
+
+func (q *Queries) CreateParticipantRecordWithoutUserCode(ctx context.Context, arg CreateParticipantRecordWithoutUserCodeParams) (Participant, error) {
+	row := q.db.QueryRow(ctx, createParticipantRecordWithoutUserCode, arg.Barcode, arg.Timestamp, arg.EventID)
 	var i Participant
 	err := row.Scan(
 		&i.Barcode,

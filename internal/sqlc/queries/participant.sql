@@ -1,5 +1,9 @@
--- name: CreateParticipantRecord :one
+-- name: CreateParticipantRecordWithUserCode :one
 INSERT INTO participants (barcode,timestamp,event_id,user_code) VALUES ($1,$2,$3,$4)
+RETURNING *;
+
+-- name: CreateParticipantRecordWithoutUserCode :one
+INSERT INTO participants (barcode,timestamp,event_id) VALUES ($1,$2,$3)
 RETURNING *;
 
 -- name: GetParticipantPagination :many

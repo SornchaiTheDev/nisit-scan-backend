@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"time"
 
@@ -50,12 +51,16 @@ func (p *participantService) AddParticipant(eventId string, r *requests.AddParti
 
 	user, err := p.userRepo.GetByCode(context.TODO(), r.StudentCode)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, nerrors.ErrUserNotFound) {
+			return nil, err
+		}
 	}
 
-	participant.FullName = user.FullName
-	participant.Gmail = user.Gmail
-	participant.Major = user.Major
+	if user != nil {
+		participant.FullName = user.FullName
+		participant.Gmail = user.Gmail
+		participant.Major = user.Major
+	}
 
 	return participant, nil
 }
@@ -74,6 +79,10 @@ func (p *participantService) GetAllParticipants(eventId string) ([]entities.Part
 	}
 
 	for i, participant := range participants {
+		if participant.StudentCode == "" {
+			continue
+		}
+
 		user, err := p.userRepo.GetByCode(context.TODO(), participant.StudentCode)
 		if err != nil {
 			return nil, err
@@ -115,6 +124,10 @@ func (p *participantService) GetPaginationParticipants(eventId string, search st
 	}
 
 	for i, participant := range participants {
+		if participant.StudentCode == "" {
+			continue
+		}
+
 		user, err := p.userRepo.GetByCode(context.TODO(), participant.StudentCode)
 		if err != nil {
 			return nil, err
