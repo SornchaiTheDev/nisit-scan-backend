@@ -13,7 +13,7 @@ import (
 )
 
 func NewUserHandler(app *fiber.App, service services.UserService) {
-	userRouter := app.Group("/users", middleware.Jwt, middleware.AdminMiddleware)
+	userRouter := app.Group("/users", middleware.Jwt)
 
 	userRouter.Post("/", func(c *fiber.Ctx) error {
 		var user entities.User
